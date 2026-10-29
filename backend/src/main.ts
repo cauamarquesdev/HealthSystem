@@ -12,9 +12,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(3001);
+  const port = process.env.PORT || 3001;
+  await app.listen(port, '0.0.0.0');
+  
   console.log(
-    `🚀 Motor do HealthSystem rodando na porta: ${await app.getUrl()}`,
+    `🚀 Motor do HealthSystem rodando na porta: ${port}`,
   );
 }
 bootstrap();
