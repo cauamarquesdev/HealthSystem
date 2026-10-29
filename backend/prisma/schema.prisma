@@ -1,0 +1,852 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  document  String?
+  createdAt DateTime @default(now())
+
+  users                User[]
+  contacts             Contact[]
+  patients             Patient[]
+  appointments         Appointment[]
+  procedures           Procedure[]
+  clinicalNotes        ClinicalNote[]
+  sales                Sale[]
+  financialTransaction FinancialTransaction[]
+  prescriptions        Prescription[]
+  documents            ClinicalDocument[] // ADICIONADO (Prontuário)
+  recordAudits         RecordAudit[] // ADICIONADO (Auditoria LGPD)
+  leads                Lead[]
+  avaliacoes           AvaliacaoEstetica[]
+  notificacoes         Notificacao[]
+  protocolos           Protocolo[]
+  documentTemplate     DocumentTemplate[]
+  protocoloAplicacoes  ProtocoloAplicacao[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  appointments  Appointment[]      @relation("ProfessionalAppointments")
+  sales         Sale[]
+  clinicalNotes ClinicalNote[]
+  prescriptions Prescription[]
+  documents     ClinicalDocument[] // ADICIONADO (Prontuário)
+  notificacoes  Notificacao[]  
+  notificacaoPrefs NotificacaoPreferencia[]
+}
+
+model Patient {
+  id          String    @id @default(uuid())
+  tenantId    String
+  name        String
+  cpf         String?
+  birthDate   DateTime?
+  phone       String
+  email       String?
+  hasWhatsapp Boolean   @default(true)
+  active      Boolean   @default(true)
+  avatar      String?   @db.Text
+
+  // --- CAMPOS ADICIONADOS PARA O CRM 360º ---
+  tags         String[] @default([]) // Ex: ["VIP PRIME", "LEAD"]
+  fototipo     String? // Ex: "Fitzpatrick III"
+  skinTendency String? // Ex: "Tendência a desidratação"
+  allergies    String? // Ex: "Alergia a Dipirona"
+  // ----------------------------------------
+
+  createdAt DateTime @default(now())
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id])
+  appointments  Appointment[]
+  sales         Sale[]
+  clinicalNotes ClinicalNote[]
+  prescriptions Prescription[]
+  media         PatientMedia[]
+  documents     ClinicalDocument[] // ADICIONADO (Necessário para _count.documents e getRecord)
+  recordAudits  RecordAudit[] // ADICIONADO (Trilha de auditoria do paciente)
+  avaliacoes    AvaliacaoEstetica[]
+  ProtocoloAplicacaoes  ProtocoloAplicacao[]     
+}
+
+// ======================================================
+// ENUM DE FUNÇÃO E CONTATOS (MANTIDOS IGUAIS)
+// ======================================================
+
+enum Role {
+  ADMIN
+  PROFESSIONAL
+  RECEPTIONIST
+}
+
+model Contact {
+  id            String        @id @default(uuid())
+  tenantId      String
+  name          String
+  phone         String?
+  birthDate     DateTime?
+  isActive      Boolean       @default(true)
+  lastVisitDate DateTime?
+  types         ContactType[]
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+enum ContactType {
+  PACIENTE
+  PROFISSIONAL
+  FORNECEDOR
+  LEAD
+}
+
+// ======================================================
+// PROCEDIMENTOS E AGENDA
+// ======================================================
+
+model Procedure {
+  id          String  @id @default(uuid())
+  tenantId    String
+  name        String
+  category    String  @default("Geral")
+  description String?
+  duration    Int
+  price       Float
+  cost        Float   @default(0)
+  returnDays  Int?
+  active      Boolean @default(true)
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id])
+  appointments Appointment[]
+  items        AppointmentProcedure[]
+}
+
+model Appointment {
+  id          String    @id @default(uuid())
+  type        String    @default("APPOINTMENT") // "APPOINTMENT" | "BLOCK"
+  date        DateTime
+  endTime     DateTime?
+  status      String    @default("AGENDADO")
+  room        String?
+  notes       String?
+  blockReason String?
+  totalValue  Float     @default(0)
+  discount    Float     @default(0)
+  deposit     Float     @default(0)
+  reminder    Boolean   @default(false)
+
+  patientId      String? // opcional: bloqueios não têm cliente
+  procedureId    String? // procedimento principal (compatibilidade)
+  tenantId       String
+  professionalId String
+
+  createdAt DateTime @default(now())
+
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
+  patient       Patient?               @relation(fields: [patientId], references: [id])
+  professional  User                   @relation("ProfessionalAppointments", fields: [professionalId], references: [id])
+  procedure     Procedure?             @relation(fields: [procedureId], references: [id])
+  items         AppointmentProcedure[]
+  clinicalNotes ClinicalNote[] // ADICIONADO (Vínculo com evoluções)
+  media         PatientMedia[] // ADICIONADO (Vínculo com fotos)
+  sales          Sale[]
+}
+
+model AppointmentProcedure {
+  id            String @id @default(uuid())
+  appointmentId String
+  procedureId   String
+  name          String // guarda o nome/preço da época do agendamento
+  duration      Int
+  price         Float
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  procedure   Procedure   @relation(fields: [procedureId], references: [id])
+}
+
+// ======================================================
+// VENDAS E FINANCEIRO (AGORA 100% SEGUROS NO MULTI-TENANT)
+// ======================================================
+
+model Sale {
+  id          String  @id @default(uuid())
+  tenantId    String
+  totalAmount Decimal
+  status      String  @default("PAGO")
+  paymentType String?
+  discount    Float   @default(0)
+  notes       String?
+
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  items                 SaleItem[]
+  financialTransactions FinancialTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, appointmentId])
+}
+
+model SaleItem {
+  id       String  @id @default(uuid())
+  name     String
+  price    Decimal
+  quantity Int     @default(1)
+
+  saleId String
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  procedureId String?
+  cost        Float   @default(0)
+}
+
+model FinancialTransaction {
+  id          String  @id @default(uuid())
+  tenantId    String
+  description String
+  amount      Decimal
+  type        String
+  status      String  @default("PENDENTE")
+
+  dueDate     DateTime
+  paymentDate DateTime?
+
+  category      String
+  paymentMethod String?
+
+  saleId String?
+  sale   Sale?   @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  counterparty     String?
+  installmentNumber Int?
+  installmentTotal  Int?
+}
+
+// ======================================================
+// FICHA CLÍNICA, RECEITAS, DOCUMENTOS, MÍDIA E AUDITORIA
+// ======================================================
+
+model ClinicalNote {
+  id            String  @id @default(uuid())
+  patientId     String
+  tenantId      String
+  userId        String
+  appointmentId String? // ADICIONADO
+  parentId      String? // ADICIONADO (Para Adendos)
+
+  type          String    @default("EVOLUCAO") // ADICIONADO: 'ANAMNESE' | 'EVOLUCAO' | 'ADENDO'
+  title         String    @default("Ficha de Anamnese")
+  content       String    @db.Text
+  data          Json? // ADICIONADO (Dados estruturados da ficha/evolução)
+  signedAt      DateTime? // ADICIONADO (Data da assinatura eletrônica)
+  signatureHash String? // ADICIONADO (Hash SHA-256 de integridade)
+
+  patient     Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
+  appointment Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  parent      ClinicalNote?  @relation("NoteAddendums", fields: [parentId], references: [id])
+  addendums   ClinicalNote[] @relation("NoteAddendums")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Prescription {
+  id            String    @id @default(uuid())
+  tenantId      String
+  title         String    @default("Receituário")
+  content       String    @default("") @db.Text
+  items         Json      @default("[]") // ADICIONADO: Array de { name, dosage, instructions }
+  signedAt      DateTime? // ADICIONADO
+  signatureHash String? // ADICIONADO
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model ClinicalDocument {
+  id        String @id @default(uuid())
+  tenantId  String
+  patientId String
+  userId    String // quem criou
+
+  type    String @default("OUTRO")
+  title   String
+  content String @db.Text
+
+  // Assinatura
+  signerName    String?
+  signatureData String?   @db.Text // PNG em Base64
+  signedAt      DateTime?
+  signatureHash String? // SHA-256 de integridade (conteúdo + assinante + data + imagem)
+
+  // Novos campos
+  templateId      String?
+  validityDays    Int? // validade do documento a partir da assinatura
+  expiresAt       DateTime?
+  canceledAt      DateTime?
+  canceledReason  String?
+  signerCpf       String?
+  signerMethod    String? // PRESENCIAL | REMOTO | PAPEL
+  signerIp        String?
+  signerUserAgent String?
+
+  // Link de assinatura remota (uso único, com validade)
+  signToken          String?   @unique
+  signTokenExpiresAt DateTime?
+
+  // Documento físico digitalizado (PDF/JPG/PNG em Data URL)
+  fileData String? @db.Text
+  fileName String?
+  fileMime String?
+  fileSize Int?
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id])
+  patient  Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user     User              @relation(fields: [userId], references: [id])
+  template DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([tenantId, type])
+  @@index([patientId, type])
+  @@index([tenantId, signedAt])
+}
+
+/// Modelos reutilizáveis. O texto aceita variáveis {{paciente.nome}}, {{data.extenso}}, {{procedimento}}...
+model DocumentTemplate {
+  id           String  @id @default(uuid())
+  tenantId     String
+  name         String
+  type         String  @default("OUTRO")
+  description  String?
+  content      String  @db.Text
+  validityDays Int?
+  active       Boolean @default(true)
+  isDefault    Boolean @default(false) // modelo inicial criado pelo sistema
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents ClinicalDocument[]
+
+  @@index([tenantId, active])
+  @@map("document_templates")
+}
+
+
+model PatientMedia {
+  id           String   @id @default(uuid())
+  url          String   @db.Text // imagem final (Data URL JPEG/PNG/WebP, já reduzida pelo navegador)
+  thumb        String?  @db.Text // miniatura (~360px) para listas rápidas
+  type         String   @default("IMAGE")
+  category     String   @default("OUTRO")
+  region       String? // ex.: "Mento", "Terço superior", "Abdômen"
+  angle        String? // ex.: "Frontal", "Perfil direito", "45° esquerdo"
+  procedimento String? // rótulo do procedimento/tratamento acompanhado
+  description  String?
+  tags         String[] @default([])
+  favorite     Boolean  @default(false)
+  mimeType     String?
+  sizeBytes    Int?
+  width        Int?
+  height       Int?
+  takenAt      DateTime @default(now())
+  uploadedById String?
+
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([patientId, takenAt(sort: Desc)])
+  @@index([patientId, procedimento])
+}
+
+
+model RecordAudit {
+  id        String   @id @default(uuid())
+  tenantId  String
+  patientId String
+  action    String // 'VIEW' | 'CREATE' | 'UPDATE' | 'SIGN' | 'DELETE'
+  entity    String // 'RECORD' | 'PROFILE' | 'NOTE' | 'PRESCRIPTION' | 'DOCUMENT' | 'MEDIA'
+  entityId  String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt(sort: Desc)])
+}
+
+// ======================================================
+// CRM / FUNIL DE LEADS
+// ======================================================
+
+model Lead {
+  id        String  @id @default(uuid())
+  tenantId  String
+  name      String
+  phone     String?
+  procedure String?
+  source    String?
+  val       String?
+  doc       String?
+  status    String  @default("NOVO") // "NOVO", "CONTATO", "AVALIACAO", "NEGOCIACAO", "GANHO"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+enum TipoMov {
+  ENTRADA
+  SAIDA
+  DESCARTE
+}
+
+enum StatusPedido {
+  RASCUNHO
+  ENVIADO
+  RECEBIDO
+}
+
+enum StatusAparelho {
+  OPERACIONAL
+  MANUTENCAO
+  INATIVO
+}
+
+model Fornecedor {
+  id           String         @id @default(cuid())
+  unidadeId    String
+  nome         String
+  contato      String?
+  telefone     String?
+  prazoEntrega String?
+  insumos      Insumo[]
+  pedidos      PedidoCompra[]
+  createdAt    DateTime       @default(now())
+
+  @@index([unidadeId])
+  @@map("fornecedores")
+}
+
+model Insumo {
+  id             String         @id @default(cuid())
+  unidadeId      String
+  nome           String
+  categoria      String
+  fabricante     String?
+  registroAnvisa String?
+  unidade        String         @default("un")
+  estoqueMin     Int            @default(0)
+  estoqueMax     Int            @default(0)
+  custoUnit      Decimal        @default(0) @db.Decimal(10, 2)
+  consumoSemanal Int            @default(0)
+  ativo          Boolean        @default(true)
+  fornecedorId   String?
+  fornecedor     Fornecedor?    @relation(fields: [fornecedorId], references: [id])
+  lotes          Lote[]
+  movimentacoes  Movimentacao[]
+  pedidoItens    PedidoItem[]
+  createdAt      DateTime       @default(now())
+
+  @@index([unidadeId, ativo])
+  @@map("insumos")
+}
+
+model Lote {
+  id        String   @id @default(cuid())
+  insumoId  String
+  insumo    Insumo   @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  codigo    String
+  validade  DateTime
+  qtd       Int
+  createdAt DateTime @default(now())
+
+  @@unique([insumoId, codigo])
+  @@index([validade])
+  @@map("lotes")
+}
+
+model Movimentacao {
+  id         String   @id @default(cuid())
+  unidadeId  String
+  insumoId   String
+  insumo     Insumo   @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  tipo       TipoMov
+  qtd        Int
+  loteCodigo String?
+  motivo     String?
+  createdAt  DateTime @default(now())
+
+  @@index([unidadeId, createdAt])
+  @@map("movimentacoes_estoque")
+}
+
+model Aparelho {
+  id                String         @id @default(cuid())
+  unidadeId         String
+  nome              String
+  marca             String?
+  serie             String?
+  registroAnvisa    String?
+  status            StatusAparelho @default(OPERACIONAL)
+  usoAtual          Int            @default(0)
+  vidaUtil          Int            @default(1)
+  unidadeUso        String         @default("disparos")
+  usoPorSessao      Int            @default(1)
+  proximaCalibracao DateTime?
+  garantiaAte       DateTime?
+  autoclave         Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+
+  @@index([unidadeId])
+  @@map("aparelhos")
+}
+
+model DocumentoRegulatorio {
+  id        String   @id @default(cuid())
+  unidadeId String
+  nome      String
+  orgao     String
+  validade  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([unidadeId, validade])
+  @@map("documentos_regulatorios")
+}
+
+model ChecklistItem {
+  id        String              @id @default(cuid())
+  unidadeId String
+  texto     String
+  ordem     Int                 @default(0)
+  registros ChecklistRegistro[]
+
+  @@index([unidadeId])
+  @@map("checklist_itens")
+}
+
+model ChecklistRegistro {
+  id          String        @id @default(cuid())
+  itemId      String
+  item        ChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  data        String // yyyy-mm-dd (fuso America/Sao_Paulo)
+  concluidoEm DateTime      @default(now())
+
+  @@unique([itemId, data])
+  @@map("checklist_registros")
+}
+
+model CicloEsterilizacao {
+  id        String   @id @default(cuid())
+  unidadeId String
+  ciclo     String
+  indicador String
+  resultado String   @default("Aprovado")
+  createdAt DateTime @default(now())
+
+  @@index([unidadeId, createdAt])
+  @@map("ciclos_esterilizacao")
+}
+
+model CaixaPerfurocortante {
+  id            String    @id @default(cuid())
+  unidadeId     String    @unique
+  nivel         Int       @default(0)
+  proximaColeta DateTime?
+
+  @@map("caixas_perfurocortantes")
+}
+
+model PedidoCompra {
+  id           String       @id @default(cuid())
+  unidadeId    String
+  numero       String
+  fornecedorId String
+  fornecedor   Fornecedor   @relation(fields: [fornecedorId], references: [id])
+  status       StatusPedido @default(RASCUNHO)
+  total        Decimal      @default(0) @db.Decimal(12, 2)
+  itens        PedidoItem[]
+  createdAt    DateTime     @default(now())
+
+  @@unique([unidadeId, numero])
+  @@index([unidadeId, status])
+  @@map("pedidos_compra")
+}
+
+model PedidoItem {
+  id        String       @id @default(cuid())
+  pedidoId  String
+  pedido    PedidoCompra @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  insumoId  String
+  insumo    Insumo       @relation(fields: [insumoId], references: [id])
+  qtd       Int
+  custoUnit Decimal      @db.Decimal(10, 2)
+
+  @@map("pedido_itens")
+}
+
+enum TipoAvaliacao {
+  FACIAL
+  CORPORAL
+  CAPILAR
+  GERAL
+}
+
+enum StatusAvaliacao {
+  RASCUNHO
+  CONCLUIDA
+  ARQUIVADA
+}
+
+model AvaliacaoEstetica {
+  id       String @id @default(uuid())
+  tenantId String
+
+  // "clienteId" aponta para o Patient (mantive o nome para não mudar o contrato da API/frontend)
+  clienteId String
+  cliente   Patient @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  profissionalId   String?
+  profissionalNome String?
+
+  tipo          TipoAvaliacao   @default(FACIAL)
+  status        StatusAvaliacao @default(RASCUNHO)
+  dataAvaliacao DateTime        @default(now())
+
+  // Geral
+  queixaPrincipal String?
+  expectativas    String?
+
+  // Anamnese resumida
+  alergias               String?
+  medicamentos           String?
+  historicoProcedimentos String?
+  gestanteLactante       Boolean @default(false)
+  tabagista              Boolean @default(false)
+  usaProtetorSolar       Boolean @default(false)
+  ingestaoAguaLitros     Float?
+
+  // Pele / cabelo
+  fototipo     Int? // Fitzpatrick I–VI
+  tipoPele     String?
+  glogau       Int? // I–IV
+  condicoes    String[] @default([])
+  hidratacao   Int? // 0–10
+  oleosidade   Int? // 0–10
+  elasticidade Int? // 0–10
+
+  // Corpo
+  pesoKg   Float?
+  alturaCm Float?
+  celulite Int? // grau 0–4
+  medidas  Json? // { cintura: 80, quadril: 100, ... } em cm
+
+  // Plano
+  procedimentosSugeridos String[]  @default([])
+  sessoesPrevistas       Int?
+  intervaloDias          Int?
+  valorEstimado          Decimal?  @db.Decimal(12, 2)
+  observacoes            String?
+  consentimentoAssinado  Boolean   @default(false)
+  dataReavaliacao        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, dataAvaliacao])
+  @@index([tenantId, dataReavaliacao])
+  @@index([clienteId])
+  @@map("avaliacoes_esteticas")
+}
+
+enum NotificacaoTipo {
+  AGENDA
+  CLINICA
+  ESTOQUE
+  FINANCEIRO
+  CRM
+  SISTEMA
+}
+
+enum NotificacaoPrioridade {
+  BAIXA
+  NORMAL
+  ALTA
+  CRITICA
+}
+
+/// Uma linha por usuário destinatário (alertas da clínica são "espalhados" para cada usuário).
+model Notificacao {
+  id         String                @id @default(uuid())
+  tenantId   String
+  userId     String
+  tipo       NotificacaoTipo       @default(SISTEMA)
+  prioridade NotificacaoPrioridade @default(NORMAL)
+  titulo     String
+  mensagem   String?               @db.Text
+  href       String? // rota interna aberta ao clicar
+  dedupeKey  String? // evita repetir o mesmo alerta automático
+  lidaEm     DateTime?
+  createdAt  DateTime              @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, lidaEm, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt])
+  @@map("notificacoes")
+}
+
+/// Categorias que o usuário silenciou (ausência de linha = ativa).
+model NotificacaoPreferencia {
+  id     String          @id @default(uuid())
+  userId String
+  tipo   NotificacaoTipo
+  ativo  Boolean         @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tipo])
+  @@map("notificacao_preferencias")
+}
+
+
+enum ProtocoloAplicacaoStatus {
+  EM_ANDAMENTO
+  CONCLUIDO
+  CANCELADO
+}
+
+/// Receita de tratamento: um conjunto ordenado de etapas (sessões / fases).
+model Protocolo {
+  id       String @id @default(uuid())
+  tenantId String
+
+  name     String
+  category String @default("Geral")
+
+  objetivo          String? @db.Text // o que o protocolo trata / descrição
+  resultadoEsperado String? @db.Text
+  indicacoes        String? @db.Text
+  contraindicacoes  String? @db.Text
+  cuidadosPre       String? @db.Text
+  cuidadosPos       String? @db.Text
+  observacoes       String? @db.Text
+
+  desconto       Float   @default(0) // % sobre a soma das etapas
+  precoManual    Float? // se preenchido, substitui o cálculo automático
+  manutencaoDias Int? // retorno de manutenção após concluir o protocolo
+  active         Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  etapas     ProtocoloEtapa[]
+  aplicacoes ProtocoloAplicacao[]
+
+  @@index([tenantId, active])
+  @@map("protocolos")
+}
+
+model ProtocoloEtapa {
+  id          String @id @default(uuid())
+  protocoloId String
+  ordem       Int
+
+  titulo        String // ex.: "Sessão 1 — Preparo da pele"
+  descricao     String? @db.Text // o que será feito
+  duracao       Int     @default(30) // minutos
+  intervaloDias Int     @default(0) // dias até a próxima etapa
+  procedureId   String? // vínculo opcional com o catálogo
+  procedureNome String? // nome do procedimento na época
+  preco         Float   @default(0)
+  orientacoes   String? @db.Text // produtos, parâmetros, cuidados desta etapa
+
+  protocolo Protocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+
+  @@index([protocoloId, ordem])
+  @@map("protocolo_etapas")
+}
+
+/// Um paciente fazendo um protocolo (acompanha o progresso etapa a etapa).
+model ProtocoloAplicacao {
+  id          String @id @default(uuid())
+  tenantId    String
+  protocoloId String
+  patientId   String
+
+  status           ProtocoloAplicacaoStatus @default(EM_ANDAMENTO)
+  etapasConcluidas Int                      @default(0)
+  iniciadoEm       DateTime                 @default(now())
+  proximaEtapaEm   DateTime?
+  concluidoEm      DateTime?
+  observacoes      String?                  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  protocolo Protocolo @relation(fields: [protocoloId], references: [id], onDelete: Cascade)
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([protocoloId, status])
+  @@index([patientId])
+  @@map("protocolo_aplicacoes")
+}
+
+
