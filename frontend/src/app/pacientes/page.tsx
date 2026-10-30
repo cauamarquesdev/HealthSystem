@@ -6,6 +6,8 @@ import {
   LayoutDashboard, Calendar, Users, Kanban, Activity, Stethoscope, DoorOpen, ListTodo, FileText, Star, BookOpen, Image as ImageIcon, FileSignature, Search, MapPin, Plus, Bell, ChevronDown, ChevronRight, UserCircle, HelpCircle, Briefcase, Settings, Download, Filter, MoreVertical, Network, Tag, Palette, Sparkles, ShieldCheck, TrendingUp, Clock, MessageCircle, CheckCircle2, AlertCircle, ChevronLeft, Edit3, CreditCard, Building2, CheckSquare, Lock, X, Camera, Phone, Mail, AlertTriangle, HeartPulse, Syringe, Loader2, Trash2
 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 export default function ClientesPage() {
   const [patients, setPatients] = useState<any[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null); 
@@ -55,7 +57,7 @@ export default function ClientesPage() {
   const fetchPatients = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/patients");
+      const res = await fetch(`${API_URL}/patients`);
       if (!res.ok) throw new Error("Falha ao carregar o banco de dados.");
       const data = await res.json();
       setPatients(data);
@@ -128,8 +130,8 @@ export default function ClientesPage() {
       };
 
       const url = editingPatientId 
-        ? `http://localhost:3001/api/patients/${editingPatientId}` 
-        : "http://localhost:3001/api/patients";
+        ? `${API_URL}/patients/${editingPatientId}` 
+        : `${API_URL}/patients`;
       
       const method = editingPatientId ? "PATCH" : "POST";
 
@@ -169,7 +171,7 @@ export default function ClientesPage() {
 
     try {
       // Usando a rota de batch que estava no seu controller do NestJS
-      const res = await fetch("http://localhost:3001/api/patients/batch", {
+      const res = await fetch(`${API_URL}/patients/batch`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [id] })
@@ -508,7 +510,7 @@ export default function ClientesPage() {
                               <span key={i} className="bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{tag}</span>
                             ))}
                           </div>
-                          <span className="text-[11px] font-bold text-slate-400 block mt-2">{activePatient.pacId} • {activePatient.age}</span>
+                          <span className="text-[11px] font-bold text-slate-400 block mt-2">{activePatient.pacId} {activePatient.age}</span>
                         </div>
                       </div>
                     </div>
@@ -927,3 +929,4 @@ function FilterPill({ label, active, onClick, color, border, dot }: any) {
     </button>
   );
 }
+      

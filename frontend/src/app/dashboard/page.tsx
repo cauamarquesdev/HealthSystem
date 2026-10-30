@@ -47,6 +47,8 @@ import {
   Wallet
 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function DashboardPage() {
     async function fetchMetrics() {
       setIsLoading(true);
       try {
-        const res = await fetch(`http://localhost:3001/api/dashboard/metrics?filter=${dateFilter}`);
+        const res = await fetch(`${API_URL}/dashboard/metrics?filter=${dateFilter}`);
         if (!res.ok) throw new Error(`Erro na API: ${res.status}`);
         const data = await res.json();
         setMetrics(data);
@@ -1094,7 +1096,7 @@ function AgendaItem({
             <Activity className="w-3 h-3" /> {procedure}
           </p>
           <p className="flex items-center gap-1.5">
-            <Stethoscope className="w-3 h-3" /> {doc} - {val}
+            <Stethoscope className="w-3 h-3" /> {doc} {val && <span>• {val}</span>}
           </p>
         </div>
       </div>

@@ -49,6 +49,8 @@ import {
 import { toast } from "sonner";
 import NewAppointmentModal from "./NewAppointmentModal";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 // --- TIPAGEM ---
 interface EventData {
   id: string;
@@ -178,7 +180,6 @@ const BLOCK_PRESETS: { label: string; start?: string; end?: string; allDay?: boo
   { label: "Folga", allDay: true },
 ];
 
-
 const inputCls =
   "w-full h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-[13px] font-medium text-slate-900 outline-none transition-all";
 const labelCls = "text-[11px] font-bold text-slate-500 uppercase tracking-widest";
@@ -221,7 +222,7 @@ export default function AgendaPage() {
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/appointments");
+      const res = await fetch(`${API_URL}/appointments`);
       if (!res.ok) throw new Error("Erro ao buscar agenda");
       const data = await res.json();
       setEvents(data.map((a: any) => ({ ...a, col: 0, date: a.date ?? todayISO() }))); // Força col 0 (Dra Joana)
@@ -303,7 +304,7 @@ export default function AgendaPage() {
     }
     setIsSaving(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/appointments/${editAppointmentData.id}`, {
+      const res = await fetch(`${API_URL}/appointments/${editAppointmentData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -341,7 +342,7 @@ export default function AgendaPage() {
     if (!window.confirm(`Deseja realmente excluir o agendamento de ${selectedAppointment.patientName}?`)) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/appointments/${selectedAppointment.id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/appointments/${selectedAppointment.id}`, { method: "DELETE" });
       if (!res.ok) {
         let message = `Erro ${res.status} ao excluir o agendamento.`;
         try { const body = await res.json(); message = Array.isArray(body?.message) ? body.message.join(", ") : body?.message ?? message; } catch {}
@@ -371,7 +372,7 @@ export default function AgendaPage() {
     try {
       let res: Response;
       try {
-        res = await fetch("http://localhost:3001/appointments", {
+        res = await fetch(`${API_URL}/appointments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(ev),
@@ -499,7 +500,7 @@ export default function AgendaPage() {
     setEvents(prev => prev.map(ev => ev.id === draggedEventId ? { ...ev, timeStart: newStart, timeEnd: newEnd } : ev));
 
     try {
-      const res = await fetch(`http://localhost:3001/appointments/${draggedEventId}`, {
+      const res = await fetch(`${API_URL}/appointments/${draggedEventId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ timeStart: newStart, timeEnd: newEnd })
       });
       if (!res.ok) {
