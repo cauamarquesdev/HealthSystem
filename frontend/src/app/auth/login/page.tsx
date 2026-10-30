@@ -27,7 +27,7 @@ export default function LoginPage() {
       const baseURL =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-      const response = await fetch(`${baseURL}/auth/login`, {
+      const response = await fetch(`${baseURL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

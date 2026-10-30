@@ -6,6 +6,8 @@ import {
   LayoutDashboard, Calendar, Users, Kanban, Activity, Stethoscope, Phone, TrendingUp, DoorOpen, ListTodo, FileText, Star, BookOpen, Image as ImageIcon, FileSignature, Search, MapPin, Plus, Bell, Download, MoreVertical, ChevronDown, UserCircle, HelpCircle, Briefcase, ChevronRight, Settings, AlignLeft, LayoutGrid, Filter as FilterIcon, AlertTriangle, CheckCircle2, Clock, MessageCircle, Mail, CheckCircle, X, Sparkles, Edit3, CalendarDays, Loader2, Trash2
 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 export default function CRMKanbanPage() {
   // ================= ESTADOS GERAIS =================
   const [leads, setLeads] = useState<any[]>([]);
@@ -39,7 +41,7 @@ export default function CRMKanbanPage() {
   const fetchLeads = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:3001/api/crm/leads");
+      const res = await fetch(`${API_URL}/crm/leads`);
       if (!res.ok) throw new Error("Erro ao buscar leads");
       const data = await res.json();
       setLeads(data);
@@ -81,7 +83,7 @@ export default function CRMKanbanPage() {
     setLeads(prev => prev.map(lead => lead.id === draggedLeadId ? { ...lead, status: newStatus } : lead));
 
     try {
-      await fetch(`http://localhost:3001/api/crm/leads/${draggedLeadId}/status`, {
+      await fetch(`${API_URL}/crm/leads/${draggedLeadId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -118,7 +120,7 @@ export default function CRMKanbanPage() {
     setLeads(prev => prev.filter(l => l.id !== id));
     
     try {
-      const res = await fetch(`http://localhost:3001/api/crm/leads/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/crm/leads/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Erro ao excluir lead");
     } catch (error) {
       console.error("Erro ao excluir:", error);
@@ -130,7 +132,7 @@ export default function CRMKanbanPage() {
     setIsSaving(true);
     try {
       const payload = { ...formData };
-      const url = editingLeadId ? `http://localhost:3001/api/crm/leads/${editingLeadId}` : "http://localhost:3001/api/crm/leads";
+      const url = editingLeadId ? `${API_URL}/crm/leads/${editingLeadId}` : `${API_URL}/crm/leads`;
       const method = editingLeadId ? "PATCH" : "POST";
       
       if (!editingLeadId) {
