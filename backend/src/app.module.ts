@@ -20,6 +20,7 @@ import { NotificacoesModule } from './notificacoes/notificacoes.module';
 import { ProtocolosModule } from './protocolos/protocolos.module';
 import { FotosModule } from './fotos/fotos.module';
 import { DocumentosModule } from './documentos/documentos.module'; // Importando o módulo de documentos
+import { PerfilModule } from './perfil/perfil.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { DocumentosModule } from './documentos/documentos.module'; // Importando
     NotificacoesModule,
     ProtocolosModule,
     FotosModule,
-    DocumentosModule, // Adicionando o módulo de documentos aos imports
+    DocumentosModule,
+    PerfilModule, // Adicionando o módulo de documentos aos imports
   ],
   // Deixe apenas o Controller e o Service raiz aqui.
   // Os outros Controllers e Services vão viver nos seus próprios módulos (ex: AuthModule).

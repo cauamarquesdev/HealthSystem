@@ -1,3 +1,4 @@
+
 "use client";
 
 /**
@@ -6,104 +7,33 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
-  Activity,
   AlertTriangle,
   Bell,
   BellRing,
-  BookOpen,
-  Boxes,
-  CalendarDays,
   Check,
   CheckCheck,
   ChevronDown,
   Circle,
-  CircleHelp,
-  ClipboardList,
-  Columns3,
   ExternalLink,
-  FileSignature,
-  Image as ImageIcon,
-  Landmark,
-  LayoutDashboard,
-  ListChecks,
   Loader2,
-  MapPin,
-  Menu,
-  Receipt,
   RefreshCw,
   Search,
   Settings,
-  Star,
-  Stethoscope,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
-// Ajuste o caminho conforme onde você salvou o arquivo compartilhado.
+
+import { AppShell } from "../../components/AppShell"; // Ajuste o caminho conforme necessário
 import {
   api,
-  NotificationBell,
   PRIORIDADE_META,
   TIPO_META,
   tempoRelativo,
   useNotificacoes,
 } from "../../lib/notificacoes";
 import type { NotifPrioridade, NotifTipo, Notificacao } from "../../lib/notificacoes";
-
-/* ═══════════════════════════════════════════════════════════════
-   CONFIG
-   ═══════════════════════════════════════════════════════════════ */
-
-const CLINICA_NOME = "Ellevare Estética Avançada";
-const UNIDADE_NOME = "Unidade Av Saudade (Matriz)";
-
-const USUARIO = {
-  nome: "Dra. Joana Oliveira",
-  cargo: "Diretora Médica & Sócia",
-  avatar: "",
-  plano: "Plano Enterprise",
-};
-
-const NAV: { section: string; items: { label: string; href: string; icon: React.ReactNode }[] }[] = [
-  {
-    section: "Visão geral",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} /> },
-      { label: "Central de Notificações", href: "/notificacoes", icon: <Bell size={18} /> },
-    ],
-  },
-  {
-    section: "Operação",
-    items: [
-      { label: "Agenda da Dra. Joana", href: "/agenda", icon: <CalendarDays size={18} /> },
-      { label: "Clientes", href: "/clientes", icon: <Users size={18} /> },
-      { label: "CRM Kanban", href: "/crm", icon: <Columns3 size={18} /> },
-      { label: "Procedimentos", href: "/procedimentos", icon: <Stethoscope size={18} /> },
-      { label: "Recursos", href: "/recursos", icon: <Boxes size={18} /> },
-      { label: "Lista de Espera", href: "/lista-de-espera", icon: <ListChecks size={18} /> },
-    ],
-  },
-  {
-    section: "Gestão clínica",
-    items: [
-      { label: "Prontuários", href: "/prontuarios", icon: <ClipboardList size={18} /> },
-      { label: "Avaliações Estéticas", href: "/avaliacoes", icon: <Star size={18} /> },
-      { label: "Protocolos", href: "/protocolos", icon: <BookOpen size={18} /> },
-      { label: "Fotos Clínicas", href: "/fotos", icon: <ImageIcon size={18} /> },
-      { label: "Termos & Documentos", href: "/termos", icon: <FileSignature size={18} /> },
-    ],
-  },
-  {
-    section: "Comercial",
-    items: [
-      { label: "Orçamentos", href: "/orcamentos", icon: <Receipt size={18} /> },
-      { label: "Financeiro", href: "/financeiro", icon: <Landmark size={18} /> },
-    ],
-  },
-];
 
 /* ═══════════════════════════════════════════════════════════════
    TIPOS E UTILIDADES
@@ -120,16 +50,6 @@ type Resumo = {
 type Preferencia = { tipo: NotifTipo; ativo: boolean };
 
 const TIPOS = Object.keys(TIPO_META) as NotifTipo[];
-
-const iniciais = (nome = "") =>
-  nome
-    .replace(/^(Dra?\.)\s*/i, "")
-    .split(" ")
-    .filter(Boolean)
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
 
 function grupoDoDia(iso: string): string {
   const d = new Date(iso);
@@ -173,7 +93,7 @@ function IconBtn({ label, onClick, children, danger }: { label: string; onClick:
       title={label}
       aria-label={label}
       onClick={onClick}
-      className={`grid h-8 w-8 place-items-center rounded-lg border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${danger ? "hover:text-rose-600" : "hover:text-blue-600"}`}
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${danger ? "hover:text-rose-600" : "hover:text-blue-600"}`}
     >
       {children}
     </button>
@@ -181,18 +101,7 @@ function IconBtn({ label, onClick, children, danger }: { label: string; onClick:
 }
 
 function Badge({ cls, children }: { cls: string; children: React.ReactNode }) {
-  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{children}</span>;
-}
-
-function Avatar({ nome, size = 36, foto }: { nome: string; size?: number; foto?: string }) {
-  return foto ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={foto} alt={nome} className="rounded-full object-cover" style={{ width: size, height: size }} />
-  ) : (
-    <span className="grid shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700" style={{ width: size, height: size, fontSize: size * 0.34 }} aria-hidden>
-      {iniciais(nome)}
-    </span>
-  );
+  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${cls}`}>{children}</span>;
 }
 
 function Modal({ title, subtitle, onClose, children }: { title: string; subtitle?: string; onClose: () => void; children: React.ReactNode }) {
@@ -209,15 +118,17 @@ function Modal({ title, subtitle, onClose, children }: { title: string; subtitle
       aria-modal="true"
       aria-label={title}
     >
-      <div className={`${card} flex max-h-[92vh] w-full max-w-lg flex-col`}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
+      <div className={`${card} flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden`}>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 sm:px-6 py-4 shrink-0">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+            <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-xs sm:text-sm text-slate-500">{subtitle}</p>}
           </div>
           <IconBtn label="Fechar" onClick={onClose}><X size={18} /></IconBtn>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+           {children}
+        </div>
       </div>
     </div>
   );
@@ -242,8 +153,8 @@ function Switch({ checked, onChange, label, hint, disabled }: { checked: boolean
   return (
     <div className={`flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-3.5 py-3 ${disabled ? "opacity-60" : ""}`}>
       <div>
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        {hint && <p className="mt-0.5 text-[11px] text-slate-500">{hint}</p>}
+        <p className="text-[13px] sm:text-sm font-semibold text-slate-800 leading-tight">{label}</p>
+        {hint && <p className="mt-0.5 text-[10px] sm:text-[11px] text-slate-500 leading-tight">{hint}</p>}
       </div>
       <button
         type="button"
@@ -314,7 +225,7 @@ function PreferenciasModal({ onClose, toast, onSincronizado }: { onClose: () => 
 
   return (
     <Modal title="Preferências de notificação" subtitle="Escolha o que você quer receber e como" onClose={onClose}>
-      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+      <div className="flex-1 space-y-5 overflow-y-auto px-4 sm:px-6 py-5 custom-scrollbar">
         <div className="space-y-2">
           <p className={eyebrow}>Neste dispositivo</p>
           <Switch label="Som ao chegar notificação" checked={config.som} onChange={(v) => setConfig({ som: v })} />
@@ -335,17 +246,17 @@ function PreferenciasModal({ onClose, toast, onSincronizado }: { onClose: () => 
             const meta = TIPO_META[p.tipo];
             return <Switch key={p.tipo} label={meta.label} checked={p.ativo} onChange={(v) => void alternar(p.tipo, v)} />;
           })}
-          <p className="text-[11px] text-slate-400">Categorias desativadas deixam de gerar notificações novas para você.</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400">Categorias desativadas deixam de gerar notificações novas para você.</p>
         </div>
 
         <div className="space-y-2">
           <p className={eyebrow}>Ferramentas</p>
-          <div className="flex flex-wrap gap-2">
-            <button className={btnGhost} disabled={busy !== null} onClick={() => void rodar("teste")}>
-              {busy === "teste" ? <Loader2 size={14} className="animate-spin" /> : <BellRing size={14} />} Enviar notificação de teste
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <button className={`${btnGhost} w-full sm:w-auto justify-center`} disabled={busy !== null} onClick={() => void rodar("teste")}>
+              {busy === "teste" ? <Loader2 size={14} className="animate-spin" /> : <BellRing size={14} />} Teste de notificação
             </button>
-            <button className={btnGhost} disabled={busy !== null} onClick={() => void rodar("sync")}>
-              {busy === "sync" ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Verificar alertas agora
+            <button className={`${btnGhost} w-full sm:w-auto justify-center`} disabled={busy !== null} onClick={() => void rodar("sync")}>
+              {busy === "sync" ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} Verificar alertas
             </button>
           </div>
           {!ativo && (
@@ -355,8 +266,8 @@ function PreferenciasModal({ onClose, toast, onSincronizado }: { onClose: () => 
           )}
         </div>
       </div>
-      <div className="flex justify-end border-t border-slate-100 px-6 py-4">
-        <button className={btnPrimary} onClick={onClose}>Concluir</button>
+      <div className="flex justify-end border-t border-slate-100 px-4 sm:px-6 py-4 shrink-0">
+        <button className={`${btnPrimary} w-full sm:w-auto`} onClick={onClose}>Concluir</button>
       </div>
     </Modal>
   );
@@ -369,10 +280,12 @@ function PreferenciasModal({ onClose, toast, onSincronizado }: { onClose: () => 
 function Kpi({ label, value, hint, dark, tone = "default" }: { label: string; value: string; hint: string; dark?: boolean; tone?: "default" | "blue" | "red" }) {
   const base = dark ? "border-slate-900 bg-slate-900 text-white" : tone === "blue" ? "border-blue-200 bg-blue-50" : tone === "red" ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white";
   return (
-    <div className={`rounded-2xl border p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] ${base}`}>
-      <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${dark ? "text-slate-300" : "text-slate-500"}`}>{label}</p>
-      <p className="mt-2 text-2xl font-extrabold tracking-tight">{value}</p>
-      <p className={`mt-1 text-[11px] ${dark ? "text-slate-400" : "text-slate-500"}`}>{hint}</p>
+    <div className={`rounded-2xl border p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] flex flex-col justify-between h-full min-w-0 ${base}`}>
+      <div>
+        <p className={`text-[10px] font-bold uppercase tracking-[0.12em] truncate ${dark ? "text-slate-300" : "text-slate-500"}`}>{label}</p>
+        <p className="mt-2 text-2xl font-extrabold tracking-tight truncate">{value}</p>
+      </div>
+      <p className={`mt-2 text-[11px] leading-tight ${dark ? "text-slate-400" : "text-slate-500"}`}>{hint}</p>
     </div>
   );
 }
@@ -551,43 +464,37 @@ function NotificacoesContent() {
 
   return (
     <main className="px-4 py-6 sm:px-8">
-      <div className="mx-auto max-w-[1100px]">
-        <nav aria-label="Trilha da página" className="mb-3 flex items-center gap-2 text-xs">
-          <span className="text-slate-500">Visão Geral</span>
-          <span className="text-slate-300">›</span>
-          <span className="font-semibold text-blue-600">Central de Notificações</span>
-        </nav>
-
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="mx-auto max-w-[1100px] w-full">
+        <header className="mb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-600 text-white shadow-sm"><Bell size={22} /></span>
+            <span className="grid h-10 w-10 sm:h-12 sm:w-12 shrink-0 place-items-center rounded-2xl bg-blue-600 text-white shadow-sm"><Bell className="w-5 h-5 sm:w-6 sm:h-6" /></span>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Central de notificações</h1>
-              <p className="mt-0.5 text-sm text-slate-500">Alertas da agenda, clínica, estoque, financeiro e CRM em um só lugar</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Notificações</h1>
+              <p className="mt-0.5 text-xs sm:text-sm text-slate-500 line-clamp-2 sm:line-clamp-none">Alertas da agenda, clínica, estoque, financeiro e CRM</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button className={btnGhost} onClick={() => void marcarTodas()} disabled={(resumo?.naoLidas ?? 0) === 0}>
+          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
+            <button className={`${btnGhost} w-full sm:w-auto justify-center whitespace-nowrap`} onClick={() => void marcarTodas()} disabled={(resumo?.naoLidas ?? 0) === 0}>
               <CheckCheck size={15} /> Marcar todas como lidas
             </button>
-            <button className={btnPrimary} onClick={() => setPrefs(true)}>
+            <button className={`${btnPrimary} w-full sm:w-auto justify-center whitespace-nowrap`} onClick={() => setPrefs(true)}>
               <Settings size={15} /> Preferências
             </button>
           </div>
         </header>
 
         {!ativo && (
-          <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+          <div className="mb-5 flex flex-col sm:flex-row items-start sm:items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+            <AlertTriangle size={16} className="mt-0.5 sm:mt-0 shrink-0" />
             <p>
               As notificações em tempo real em outras páginas estão desligadas. Envolva o layout do app com{" "}
-              <code className="rounded bg-amber-100 px-1 font-semibold">&lt;NotificacoesProvider&gt;</code> para recebê-las em qualquer tela.
+              <code className="rounded bg-amber-100 px-1 font-semibold">&lt;NotificacoesProvider&gt;</code> para recebê-las.
             </p>
           </div>
         )}
 
         {/* Abas por categoria (mesmo padrão do Prontuário) */}
-        <nav className={`${card} mb-6 flex gap-1 overflow-x-auto p-1.5`} role="tablist" aria-label="Categorias">
+        <nav className={`${card} mb-6 flex gap-1 overflow-x-auto p-1.5 scrollbar-hide`} role="tablist" aria-label="Categorias">
           {(["TODAS", ...TIPOS] as const).map((t) => {
             const ativa = tab === t;
             const Icon = t === "TODAS" ? Bell : TIPO_META[t].icon;
@@ -598,54 +505,58 @@ function NotificacoesContent() {
                 role="tab"
                 aria-selected={ativa}
                 onClick={() => setTab(t)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${ativa ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}
+                className={`flex shrink-0 items-center justify-center gap-1.5 sm:gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-sm font-semibold transition whitespace-nowrap ${ativa ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}
               >
-                <Icon size={15} />
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                 {t === "TODAS" ? "Todas" : TIPO_META[t].label.split(" ")[0]}
                 {naoLidas > 0 && (
-                  <span className={`rounded-full px-1.5 text-[10px] font-bold ${ativa ? "bg-white/25 text-white" : "bg-rose-100 text-rose-700"}`}>{naoLidas}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold shrink-0 ${ativa ? "bg-white/25 text-white" : "bg-rose-100 text-rose-700"}`}>{naoLidas}</span>
                 )}
               </button>
             );
           })}
         </nav>
 
-        <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Indicadores">
-          <Kpi label="Não lidas" value={String(resumo?.naoLidas ?? 0)} hint="Aguardando sua atenção" tone={(resumo?.naoLidas ?? 0) > 0 ? "blue" : "default"} />
+        <section className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4" aria-label="Indicadores">
+          <Kpi label="Não lidas" value={String(resumo?.naoLidas ?? 0)} hint="Aguardando atenção" tone={(resumo?.naoLidas ?? 0) > 0 ? "blue" : "default"} />
           <Kpi label="Recebidas hoje" value={String(resumo?.hoje ?? 0)} hint="Desde a meia-noite" />
-          <Kpi label="Prioridade alta" value={String(resumo?.altas ?? 0)} hint="Alta ou crítica, não lidas" tone={(resumo?.altas ?? 0) > 0 ? "red" : "default"} />
-          <Kpi dark label="No histórico" value={String(resumo?.total ?? 0)} hint="Lidas são removidas após 90 dias" />
+          <Kpi label="Prioridade alta" value={String(resumo?.altas ?? 0)} hint="Alta ou crítica" tone={(resumo?.altas ?? 0) > 0 ? "red" : "default"} />
+          <Kpi dark label="No histórico" value={String(resumo?.total ?? 0)} hint="Removidas após 90 dias" />
         </section>
 
         {/* Filtros */}
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="relative w-full max-w-sm">
+        <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3 w-full">
+          <div className="relative w-full md:max-w-sm shrink-0">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input className={`${inputCls} pl-9`} placeholder="Buscar nas notificações…" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar notificações" />
+            <input className={`${inputCls} pl-9 w-full`} placeholder="Buscar nas notificações…" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar notificações" />
           </div>
-          <div className="relative">
-            <select
-              className={`${inputCls} appearance-none pr-9`}
-              value={prioridade}
-              onChange={(e) => setPrioridade(e.target.value as NotifPrioridade | "")}
-              aria-label="Filtrar por prioridade"
-            >
-              <option value="">Todas as prioridades</option>
-              {(Object.keys(PRIORIDADE_META) as NotifPrioridade[]).map((p) => <option key={p} value={p}>{PRIORIDADE_META[p].label}</option>)}
-            </select>
-            <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex flex-wrap items-center gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0 w-full md:w-auto">
+            <div className="relative w-full sm:w-auto">
+              <select
+                className={`${inputCls} appearance-none pr-9 w-full sm:w-auto text-[12px] sm:text-sm font-semibold`}
+                value={prioridade}
+                onChange={(e) => setPrioridade(e.target.value as NotifPrioridade | "")}
+                aria-label="Filtrar por prioridade"
+              >
+                <option value="">Todas prioridades</option>
+                {(Object.keys(PRIORIDADE_META) as NotifPrioridade[]).map((p) => <option key={p} value={p}>{PRIORIDADE_META[p].label}</option>)}
+              </select>
+              <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            </div>
+            <div className="flex w-full sm:w-auto gap-2">
+               <button
+                 type="button"
+                 aria-pressed={apenasNaoLidas}
+                 onClick={() => setApenasNaoLidas((v) => !v)}
+                 className={`flex-1 sm:flex-none justify-center rounded-xl px-3 py-2.5 text-[11px] sm:text-xs font-bold transition whitespace-nowrap border shadow-sm ${apenasNaoLidas ? "bg-blue-600 text-white border-blue-600" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+               >
+                 Somente não lidas
+               </button>
+               <button className={`${btnGhost} flex-1 sm:flex-none justify-center !py-2.5 text-[11px] sm:text-xs md:ml-auto whitespace-nowrap`} onClick={() => void limparLidas()}>
+                 <Trash2 size={13} className="shrink-0" /> Limpar lidas
+               </button>
+            </div>
           </div>
-          <button
-            type="button"
-            aria-pressed={apenasNaoLidas}
-            onClick={() => setApenasNaoLidas((v) => !v)}
-            className={`rounded-full px-3.5 py-2 text-xs font-semibold transition ${apenasNaoLidas ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
-          >
-            Somente não lidas
-          </button>
-          <button className={`${btnGhost} ml-auto !py-2 text-xs`} onClick={() => void limparLidas()}>
-            <Trash2 size={13} /> Limpar lidas
-          </button>
         </div>
 
         {/* Lista */}
@@ -654,12 +565,12 @@ function NotificacoesContent() {
             {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-100" />)}
           </div>
         ) : error ? (
-          <div className={`${card} p-12 text-center`}>
+          <div className={`${card} p-8 sm:p-12 text-center`}>
             <p className="text-sm text-rose-600">{error}</p>
             <button className={`${btnGhost} mt-3`} onClick={() => void load(false)}><RefreshCw size={14} /> Tentar de novo</button>
           </div>
         ) : items.length === 0 ? (
-          <div className={`${card} p-16 text-center`}>
+          <div className={`${card} p-10 sm:p-16 text-center`}>
             <Bell size={30} className="mx-auto text-slate-300" />
             <p className="mt-3 text-sm font-semibold text-slate-700">{filtrando ? "Nenhuma notificação encontrada" : "Você está em dia"}</p>
             <p className="mt-1 text-xs text-slate-500">
@@ -680,11 +591,11 @@ function NotificacoesContent() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             {agrupadas.map(([grupo, lista]) => (
               <section key={grupo} aria-label={grupo}>
                 <h2 className={`${eyebrow} mb-2 px-1`}>{grupo}</h2>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2 sm:space-y-2.5">
                   {lista.map((n) => {
                     const meta = TIPO_META[n.tipo];
                     const Icon = meta.icon;
@@ -693,25 +604,43 @@ function NotificacoesContent() {
                     return (
                       <li
                         key={n.id}
-                        className={`relative flex items-start gap-3 rounded-2xl border p-4 transition ${naoLida ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white"}`}
+                        className={`relative flex flex-col sm:flex-row sm:items-start gap-3 rounded-2xl border p-4 transition ${naoLida ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white"}`}
                       >
                         {naoLida && <span className="absolute bottom-4 left-0 top-4 w-1 rounded-r bg-blue-600" aria-hidden />}
-                        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${meta.tile}`}><Icon size={18} /></span>
+                        <div className="flex items-start gap-3 w-full sm:w-auto">
+                           <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${meta.tile}`}><Icon size={18} /></span>
+                           <button type="button" className="min-w-0 flex-1 text-left sm:hidden" onClick={() => void abrir(n)}>
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className={`text-[13px] text-slate-900 line-clamp-2 ${naoLida ? "font-extrabold" : "font-semibold"}`}>{n.titulo}</span>
+                              </span>
+                           </button>
+                        </div>
 
-                        <button type="button" className="min-w-0 flex-1 text-left" onClick={() => void abrir(n)}>
+                        <button type="button" className="min-w-0 flex-1 text-left hidden sm:block" onClick={() => void abrir(n)}>
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className={`text-sm text-slate-900 ${naoLida ? "font-extrabold" : "font-semibold"}`}>{n.titulo}</span>
-                            {forte && <Badge cls={PRIORIDADE_META[n.prioridade].cls}>{n.prioridade === "CRITICA" ? <AlertTriangle size={11} /> : null}{PRIORIDADE_META[n.prioridade].label}</Badge>}
+                            <span className={`text-[13px] sm:text-sm text-slate-900 ${naoLida ? "font-extrabold" : "font-semibold"}`}>{n.titulo}</span>
+                            {forte && <Badge cls={PRIORIDADE_META[n.prioridade].cls}>{n.prioridade === "CRITICA" ? <AlertTriangle size={11} className="shrink-0" /> : null}{PRIORIDADE_META[n.prioridade].label}</Badge>}
                           </span>
-                          {n.mensagem && <span className="mt-0.5 block text-sm text-slate-600">{n.mensagem}</span>}
-                          <span className="mt-1.5 flex items-center gap-2 text-[11px] text-slate-400">
-                            <span className="font-semibold uppercase tracking-wide">{meta.label}</span>
+                          {n.mensagem && <span className="mt-0.5 block text-[12px] sm:text-sm text-slate-600 line-clamp-2 sm:line-clamp-none">{n.mensagem}</span>}
+                          <span className="mt-1.5 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-slate-400">
+                            <span className="font-bold uppercase tracking-wide">{meta.label}</span>
                             <span aria-hidden>·</span>
                             <time dateTime={n.createdAt}>{tempoRelativo(n.createdAt)}</time>
                           </span>
                         </button>
+                        
+                        {/* Mobile Infos that were hidden inside the button */}
+                        <div className="sm:hidden min-w-0 flex-1 -mt-2 ml-14">
+                           {forte && <div className="mb-1"><Badge cls={PRIORIDADE_META[n.prioridade].cls}>{n.prioridade === "CRITICA" ? <AlertTriangle size={11} className="shrink-0" /> : null}{PRIORIDADE_META[n.prioridade].label}</Badge></div>}
+                           {n.mensagem && <span className="block text-[12px] text-slate-600 line-clamp-2">{n.mensagem}</span>}
+                           <span className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-400">
+                             <span className="font-bold uppercase tracking-wide">{meta.label}</span>
+                             <span aria-hidden>·</span>
+                             <time dateTime={n.createdAt}>{tempoRelativo(n.createdAt)}</time>
+                           </span>
+                        </div>
 
-                        <div className="flex shrink-0 items-center">
+                        <div className="flex shrink-0 items-center justify-end w-full sm:w-auto mt-2 sm:mt-0 gap-1 sm:gap-0 border-t border-slate-100 sm:border-t-0 pt-2 sm:pt-0">
                           {n.href && <IconBtn label="Abrir" onClick={() => void abrir(n)}><ExternalLink size={15} /></IconBtn>}
                           <IconBtn label={naoLida ? "Marcar como lida" : "Marcar como não lida"} onClick={() => void alternarLida(n)}>
                             {naoLida ? <Check size={16} /> : <Circle size={15} />}
@@ -726,8 +655,8 @@ function NotificacoesContent() {
             ))}
 
             {hasMore && (
-              <div className="text-center">
-                <button className={btnGhost} onClick={() => void maisAntigas()} disabled={carregandoMais}>
+              <div className="text-center pt-2">
+                <button className={`${btnGhost} w-full sm:w-auto`} onClick={() => void maisAntigas()} disabled={carregandoMais}>
                   {carregandoMais && <Loader2 size={14} className="animate-spin" />} Carregar mais antigas
                 </button>
               </div>
@@ -735,7 +664,7 @@ function NotificacoesContent() {
           </div>
         )}
 
-        <footer className="mt-10 border-t border-slate-200 pt-4 text-[11px] text-slate-400">
+        <footer className="mt-8 border-t border-slate-200 pt-4 text-[10px] sm:text-[11px] text-slate-400 text-center sm:text-left pb-4">
           HealthSystem · Central de notificações · Os alertas automáticos são verificados a cada 10 minutos
         </footer>
       </div>
@@ -746,108 +675,11 @@ function NotificacoesContent() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SHELL DO SISTEMA (sidebar + topbar)
-   Se o seu layout.tsx já renderiza isso, remova AppShell e exporte só <NotificacoesContent />
-   ═══════════════════════════════════════════════════════════════ */
-
-function AppShell({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname() ?? "";
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-white text-slate-900">
-      {open && <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
-        aria-label="Navegação principal"
-      >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><Activity size={20} /></span>
-          <div className="leading-tight">
-            <p className="text-lg font-extrabold tracking-tight text-slate-900">HealthSystem</p>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">Clinical Suite</p>
-          </div>
-        </div>
-
-        <button type="button" className="flex w-full items-center justify-between border-y border-slate-100 px-5 py-3 text-left hover:bg-slate-50" aria-label="Trocar unidade">
-          <span className="min-w-0">
-            <span className="block truncate text-[10px] font-semibold text-blue-600">{CLINICA_NOME}</span>
-            <span className="block truncate text-[13px] font-semibold text-slate-800">{UNIDADE_NOME}</span>
-          </span>
-          <ChevronDown size={16} className="shrink-0 text-slate-400" />
-        </button>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV.map((group) => (
-            <div key={group.section} className="mb-5">
-              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group.section}</p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}
-                      >
-                        <span className={active ? "text-blue-600" : "text-slate-400"}>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar nome={USUARIO.nome} foto={USUARIO.avatar} size={36} />
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-[13px] font-bold text-slate-900">{USUARIO.nome}</p>
-              <p className="truncate text-[11px] text-blue-600">{USUARIO.cargo}</p>
-            </div>
-            <IconBtn label="Configurações" onClick={() => {}}><Settings size={16} /></IconBtn>
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
-            <Badge cls="border-blue-200 bg-blue-50 text-blue-700">{USUARIO.plano}</Badge>
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800"><CircleHelp size={13} /> Suporte</button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[62px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
-          <button className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-50 lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
-            <Menu size={20} />
-          </button>
-          <nav aria-label="Trilha" className="hidden items-center gap-2 text-[13px] sm:flex">
-            <span className="text-slate-500">Visão Geral</span>
-            <span className="text-slate-300">›</span>
-            <span className="font-bold text-slate-900">Central de Notificações</span>
-          </nav>
-          <span className="hidden items-center gap-1.5 text-[13px] font-semibold text-blue-600 lg:flex"><MapPin size={15} /> {UNIDADE_NOME}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
-            <button className="grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-50" aria-label="Ajuda"><CircleHelp size={18} /></button>
-            <Avatar nome={USUARIO.nome} foto={USUARIO.avatar} size={36} />
-          </div>
-        </header>
-        <div className="flex-1 overflow-y-auto bg-slate-50">{children}</div>
-      </div>
-    </div>
-  );
-}
-
 export default function NotificacoesPage() {
   return (
-    <AppShell>
+    <AppShell trilha={["Visão Geral", "Central de Notificações"]}>
       <NotificacoesContent />
     </AppShell>
   );
 }
+

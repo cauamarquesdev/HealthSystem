@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-import { AppShell } from "../../components/Shell";
+import { AppShell } from "../../components/AppShell";
 
 import AnamneseTab from "./tabs/Anamnesetab";
 import EvolutionsTab from "./tabs/Evolutionstab";
@@ -256,14 +256,13 @@ export default function ProntuariosPage() {
 
   return (
     <AppShell
-    active="prontuarios"
-   breadcrumb="Prontuários"
-   search={{
-    value: search,
-    onChange: setSearch,
-    placeholder: "Buscar paciente...",
-    }}
-      >
+      trilha={["Prontuários"]}
+      busca={{
+        valor: search,
+        onChange: setSearch,
+        placeholder: "Buscar paciente...",
+      }}
+    >
       <div className="h-full min-h-0 overflow-y-auto bg-slate-50">
         <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
           {/* Cabeçalho */}

@@ -30,6 +30,16 @@ model Tenant {
   protocolos           Protocolo[]
   documentTemplate     DocumentTemplate[]
   protocoloAplicacoes  ProtocoloAplicacao[]
+
+
+  // Dados da clínica
+  unitName     String? // ex.: "Unidade Av Saudade (Matriz)"
+  phone        String?
+  email        String?
+  address      String?
+  openingHours String? // texto livre, ex.: "Seg–Sex 8h–19h · Sáb 8h–13h"
+  logo         String? @db.Text // Data URL reduzida
+
 }
 
 model User {
@@ -51,7 +61,18 @@ model User {
   documents     ClinicalDocument[] // ADICIONADO (Prontuário)
   notificacoes  Notificacao[]  
   notificacaoPrefs NotificacaoPreferencia[]
+
+  // Perfil
+  avatar        String? @db.Text // foto recortada 256×256 (Data URL, ~20–40 KB)
+  phone         String?
+  jobTitle      String? // cargo / especialidade
+  councilType   String? // CRM | CRO | COREN | CREFITO | CRBM | CRF | CRN | CRP | OUTRO
+  councilNumber String?
+  councilState  String? // UF do conselho
+  bio           String?
+  signatureData String? @db.Text // rubrica desenhada (PNG em Data URL), usada em atestados e declarações
 }
+
 
 model Patient {
   id          String    @id @default(uuid())

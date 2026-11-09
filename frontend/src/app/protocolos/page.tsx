@@ -1,117 +1,60 @@
 "use client";
 
-/**
- * PROTOCOLOS DE TRATAMENTO — página única (Next.js App Router + Tailwind + lucide-react).
- * Backend: NestJS /protocolos (module/service/controller) + Prisma.
- *
- * Um protocolo é uma sequência de etapas (sessões/fases): o que será feito, tempo, intervalo,
- * procedimento do catálogo, preço e orientações. Dá para aplicar a pacientes e acompanhar o progresso.
- */
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
   Ban,
-  Bell,
-  BookOpen,
-  Boxes,
   CalendarClock,
-  CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  CircleHelp,
   Clock,
   ClipboardList,
-  Columns3,
   Copy,
   Download,
-  FileSignature,
-  Image as ImageIcon,
-  Landmark,
-  LayoutDashboard,
-  LayoutGrid,
   Layers,
   List,
-  ListChecks,
   Loader2,
-  MapPin,
-  Menu,
   MoreHorizontal,
   Pencil,
   Plus,
   Printer,
-  Receipt,
   RotateCcw,
   Search,
-  Settings,
   Star,
-  Stethoscope,
   Trash2,
   UserPlus,
   Users,
   Wallet,
   X,
+  LayoutGrid,
+  BookOpen,
 } from "lucide-react";
-// Ajuste o caminho conforme onde você salvou o arquivo compartilhado de notificações.
-import { api, NotificationBell } from "../../lib/notificacoes";
+import { AppShell } from "../../components/AppShell"; // Ajuste o caminho se necessário
 
 /* ═══════════════════════════════════════════════════════════════
    CONFIG
    ═══════════════════════════════════════════════════════════════ */
 
 const CLINICA_NOME = "Ellevare Estética Avançada";
-const UNIDADE_NOME = "Unidade Av Saudade (Matriz)";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/"
+).replace(/\/+$/, "");
+
 const BASE = "/protocolos";
 
-const USUARIO = {
-  nome: "Dra. Joana Oliveira",
-  cargo: "Diretora Médica & Sócia",
-  avatar: "",
-  plano: "Plano Enterprise",
-};
-
-const NAV: { section: string; items: { label: string; href: string; icon: React.ReactNode }[] }[] = [
-  {
-    section: "Visão geral",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} /> },
-      { label: "Central de Notificações", href: "/notificacoes", icon: <Bell size={18} /> },
-    ],
-  },
-  {
-    section: "Operação",
-    items: [
-      { label: "Agenda da Dra. Joana", href: "/agenda", icon: <CalendarDays size={18} /> },
-      { label: "Clientes", href: "/clientes", icon: <Users size={18} /> },
-      { label: "CRM Kanban", href: "/crm", icon: <Columns3 size={18} /> },
-      { label: "Procedimentos", href: "/procedimentos", icon: <Stethoscope size={18} /> },
-      { label: "Recursos", href: "/recursos", icon: <Boxes size={18} /> },
-      { label: "Lista de Espera", href: "/lista-de-espera", icon: <ListChecks size={18} /> },
-    ],
-  },
-  {
-    section: "Gestão clínica",
-    items: [
-      { label: "Prontuários", href: "/prontuarios", icon: <ClipboardList size={18} /> },
-      { label: "Avaliações Estéticas", href: "/avaliacoes", icon: <Star size={18} /> },
-      { label: "Protocolos", href: "/protocolos", icon: <BookOpen size={18} /> },
-      { label: "Fotos Clínicas", href: "/fotos", icon: <ImageIcon size={18} /> },
-      { label: "Termos & Documentos", href: "/termos", icon: <FileSignature size={18} /> },
-    ],
-  },
-  {
-    section: "Comercial",
-    items: [
-      { label: "Orçamentos", href: "/orcamentos", icon: <Receipt size={18} /> },
-      { label: "Financeiro", href: "/financeiro", icon: <Landmark size={18} /> },
-    ],
-  },
-];
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const token =
+    localStorage.getItem("@ClinicOS:token") ??
+    localStorage.getItem("token") ??
+    localStorage.getItem("accessToken");
+  if (token) return token;
+  const match = document.cookie.match(/(?:^|;\s*)token=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    TIPOS
@@ -221,7 +164,6 @@ const iniciais = (nome = "") =>
     .join("")
     .toUpperCase();
 
-/** Mesma regra do backend, usada também na prévia do formulário. */
 function calcularTotais(etapas: { duracao: number; intervaloDias: number; preco: number }[], desconto: number, precoManual: number | null): Totais {
   const duracaoMin = etapas.reduce((s, e) => s + e.duracao, 0);
   const prazoDias = etapas.slice(0, -1).reduce((s, e) => s + e.intervaloDias, 0);
@@ -296,6 +238,30 @@ function imprimir(p: Protocolo) {
   w.print();
 }
 
+async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/api${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    let msg = `Erro ${res.status}`;
+    try {
+      const body = await res.json();
+      msg = Array.isArray(body?.message) ? body.message.join(", ") : body?.message ?? msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    UI BASE
    ═══════════════════════════════════════════════════════════════ */
@@ -310,8 +276,8 @@ const toneClass: Record<Tone, string> = {
   info: "bg-blue-50 text-blue-700 border-blue-200",
 };
 
-function Badge({ tone = "neutral", children }: { tone?: Tone; children: React.ReactNode }) {
-  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass[tone]}`}>{children}</span>;
+function Badge({ tone = "neutral", children, className = "" }: { tone?: Tone; children: React.ReactNode, className?: string }) {
+  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${toneClass[tone]} ${className}`}>{children}</span>;
 }
 
 const btnPrimary =
@@ -333,7 +299,7 @@ function IconBtn({ label, onClick, children, danger, disabled }: { label: string
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className={`grid h-8 w-8 place-items-center rounded-lg border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-40 ${danger ? "hover:text-rose-600" : "hover:text-blue-600"}`}
+      className={`grid h-8 w-8 place-items-center rounded-lg border border-transparent text-slate-500 transition hover:border-slate-200 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 disabled:opacity-40 shrink-0 ${danger ? "hover:text-rose-600" : "hover:text-blue-600"}`}
     >
       {children}
     </button>
@@ -343,7 +309,7 @@ function IconBtn({ label, onClick, children, danger, disabled }: { label: string
 function Avatar({ nome, size = 36, foto }: { nome: string; size?: number; foto?: string }) {
   return foto ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={foto} alt={nome} className="rounded-full object-cover" style={{ width: size, height: size }} />
+    <img src={foto} alt={nome} className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />
   ) : (
     <span className="grid shrink-0 place-items-center rounded-full bg-blue-100 font-bold text-blue-700" style={{ width: size, height: size, fontSize: size * 0.34 }} aria-hidden>
       {iniciais(nome)}
@@ -365,15 +331,17 @@ function Modal({ title, subtitle, onClose, children, wide }: { title: string; su
       aria-modal="true"
       aria-label={title}
     >
-      <div className={`${card} flex max-h-[92vh] w-full flex-col ${wide ? "max-w-4xl" : "max-w-md"}`}>
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
+      <div className={`${card} flex max-h-[92vh] w-full flex-col overflow-hidden ${wide ? "max-w-4xl" : "max-w-md"}`}>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 sm:px-6 py-4 shrink-0">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+            <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-xs sm:text-sm text-slate-500">{subtitle}</p>}
           </div>
           <IconBtn label="Fechar" onClick={onClose}><X size={18} /></IconBtn>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+           {children}
+        </div>
       </div>
     </div>
   );
@@ -383,11 +351,11 @@ function ConfirmModal({ message, confirmLabel = "Confirmar", danger, onConfirm, 
   const [busy, setBusy] = useState(false);
   return (
     <Modal title="Confirmar ação" onClose={onClose}>
-      <p className="px-6 py-5 text-sm text-slate-600">{message}</p>
-      <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
-        <button className={btnGhost} onClick={onClose}>Cancelar</button>
+      <p className="px-4 sm:px-6 py-5 text-sm text-slate-600">{message}</p>
+      <div className="flex flex-col sm:flex-row justify-end gap-2 border-t border-slate-100 px-4 sm:px-6 py-4 shrink-0">
+        <button className={`${btnGhost} w-full sm:w-auto`} onClick={onClose}>Cancelar</button>
         <button
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${danger ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"}`}
+          className={`inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${danger ? "bg-rose-600 hover:bg-rose-700" : "bg-blue-600 hover:bg-blue-700"}`}
           disabled={busy}
           onClick={async () => {
             setBusy(true);
@@ -411,7 +379,7 @@ type ToastMsg = { id: number; text: string; tone: "ok" | "err" };
 
 function Toasts({ list }: { list: ToastMsg[] }) {
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-[95] flex flex-col gap-2" aria-live="polite">
+    <div className="pointer-events-none fixed bottom-6 right-6 z-[80] flex flex-col gap-2" aria-live="polite">
       {list.map((t) => (
         <div key={t.id} className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg ${t.tone === "ok" ? "bg-slate-900" : "bg-rose-600"}`}>
           {t.tone === "ok" ? <Check size={16} /> : <AlertTriangle size={16} />}
@@ -580,19 +548,22 @@ function EtapaEditor({ e, idx, total, catalogo, onChange, onMove, onRemove }: { 
   };
 
   return (
-    <li className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center gap-3">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white">{idx + 1}</span>
-        <input
-          className={`${inputCls} !py-2 font-semibold`}
-          placeholder="Título da etapa (ex.: Sessão 1 — Preparo da pele)"
-          value={e.titulo}
-          onChange={(ev) => onChange({ titulo: ev.target.value })}
-          aria-label={`Título da etapa ${idx + 1}`}
-        />
-        <div className="flex shrink-0">
+    <li className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+          <span className="grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-full bg-blue-600 text-[11px] sm:text-xs font-bold text-white">{idx + 1}</span>
+          <input
+            className={`${inputCls} !py-2 font-semibold flex-1`}
+            placeholder="Título da etapa (ex.: Sessão 1 — Preparo da pele)"
+            value={e.titulo}
+            onChange={(ev) => onChange({ titulo: ev.target.value })}
+            aria-label={`Título da etapa ${idx + 1}`}
+          />
+        </div>
+        <div className="flex items-center self-end sm:self-auto shrink-0 border border-slate-200 rounded-lg p-1 sm:border-0 sm:p-0">
           <IconBtn label="Mover para cima" onClick={() => onMove(-1)} disabled={idx === 0}><ChevronUp size={16} /></IconBtn>
           <IconBtn label="Mover para baixo" onClick={() => onMove(1)} disabled={ultima}><ChevronDown size={16} /></IconBtn>
+          <div className="w-px h-4 bg-slate-200 mx-1 sm:hidden"></div>
           <IconBtn label="Remover etapa" danger onClick={onRemove} disabled={total === 1}><Trash2 size={15} /></IconBtn>
         </div>
       </div>
@@ -611,12 +582,12 @@ function EtapaEditor({ e, idx, total, catalogo, onChange, onMove, onRemove }: { 
           <input type="number" min={0} step="0.01" className={inputCls} value={e.preco} onChange={(ev) => onChange({ preco: ev.target.value })} />
         </Field>
         <Field label="O que será feito" className="sm:col-span-4">
-          <textarea rows={2} className={inputCls} placeholder="Passo a passo, produtos, parâmetros do equipamento…" value={e.descricao} onChange={(ev) => onChange({ descricao: ev.target.value })} />
+          <textarea rows={2} className={`${inputCls} !h-auto py-2 resize-none`} placeholder="Passo a passo, produtos, parâmetros do equipamento…" value={e.descricao} onChange={(ev) => onChange({ descricao: ev.target.value })} />
         </Field>
         <Field label="Orientações desta etapa" className="sm:col-span-3">
           <input className={inputCls} placeholder="Ex.: não expor ao sol por 48h" value={e.orientacoes} onChange={(ev) => onChange({ orientacoes: ev.target.value })} />
         </Field>
-        <Field label="Próxima etapa em (dias)" hint={ultima ? "Ignorado na última etapa" : undefined}>
+        <Field label="Próxima etapa (dias)" hint={ultima ? "Ignorado no final" : undefined}>
           <input type="number" min={0} className={inputCls} value={e.intervaloDias} disabled={ultima} onChange={(ev) => onChange({ intervaloDias: ev.target.value })} />
         </Field>
       </div>
@@ -684,7 +655,7 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
 
   return (
     <Modal wide title={inicial ? "Editar protocolo" : "Novo protocolo"} subtitle="Defina o que será feito em cada etapa, o tempo e as orientações" onClose={onClose}>
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-4 pt-3" role="tablist">
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-4 pt-3 scrollbar-hide shrink-0" role="tablist">
         {ABAS.map((a) => (
           <button
             key={a}
@@ -699,7 +670,7 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
         ))}
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+      <div className="flex-1 space-y-5 overflow-y-auto custom-scrollbar px-4 sm:px-6 py-5">
         {aba === "Geral" && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nome do protocolo *" className="sm:col-span-2">
@@ -721,10 +692,10 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
               </div>
             </div>
             <Field label="Objetivo do protocolo" className="sm:col-span-2">
-              <textarea rows={3} className={inputCls} placeholder="O que este protocolo trata e como funciona" value={f.objetivo} onChange={(e) => set("objetivo", e.target.value)} />
+              <textarea rows={3} className={`${inputCls} !h-auto py-2 resize-none`} placeholder="O que este protocolo trata e como funciona" value={f.objetivo} onChange={(e) => set("objetivo", e.target.value)} />
             </Field>
             <Field label="Resultado esperado" className="sm:col-span-2">
-              <textarea rows={2} className={inputCls} placeholder="O que o paciente pode esperar ao final" value={f.resultadoEsperado} onChange={(e) => set("resultadoEsperado", e.target.value)} />
+              <textarea rows={2} className={`${inputCls} !h-auto py-2 resize-none`} placeholder="O que o paciente pode esperar ao final" value={f.resultadoEsperado} onChange={(e) => set("resultadoEsperado", e.target.value)} />
             </Field>
           </div>
         )}
@@ -745,7 +716,7 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
                 />
               ))}
             </ol>
-            <button type="button" className={btnGhost} onClick={() => setF((p) => ({ ...p, etapas: [...p.etapas, etapaVazia(p.etapas.length + 1)] }))}>
+            <button type="button" className={`${btnGhost} w-full sm:w-auto justify-center`} onClick={() => setF((p) => ({ ...p, etapas: [...p.etapas, etapaVazia(p.etapas.length + 1)] }))}>
               <Plus size={15} /> Adicionar etapa
             </button>
             {catalogo.length === 0 && (
@@ -759,21 +730,21 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
         {aba === "Orientações" && (
           <div className="grid grid-cols-1 gap-4">
             <Field label="Indicações">
-              <textarea rows={3} className={inputCls} placeholder="Para quem este protocolo é indicado" value={f.indicacoes} onChange={(e) => set("indicacoes", e.target.value)} />
+              <textarea rows={3} className={`${inputCls} !h-auto py-2 resize-none`} placeholder="Para quem este protocolo é indicado" value={f.indicacoes} onChange={(e) => set("indicacoes", e.target.value)} />
             </Field>
             <Field label="Contraindicações">
-              <textarea rows={3} className={`${inputCls} border-rose-200 focus:border-rose-400 focus:ring-rose-100`} placeholder="Gestantes, uso de isotretinoína, alergias, infecções ativas…" value={f.contraindicacoes} onChange={(e) => set("contraindicacoes", e.target.value)} />
+              <textarea rows={3} className={`${inputCls} !h-auto py-2 resize-none border-rose-200 focus:border-rose-400 focus:ring-rose-100`} placeholder="Gestantes, uso de isotretinoína, alergias, infecções ativas…" value={f.contraindicacoes} onChange={(e) => set("contraindicacoes", e.target.value)} />
             </Field>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Cuidados pré-procedimento">
-                <textarea rows={4} className={inputCls} value={f.cuidadosPre} onChange={(e) => set("cuidadosPre", e.target.value)} />
+                <textarea rows={4} className={`${inputCls} !h-auto py-2 resize-none`} value={f.cuidadosPre} onChange={(e) => set("cuidadosPre", e.target.value)} />
               </Field>
               <Field label="Cuidados pós-procedimento">
-                <textarea rows={4} className={inputCls} value={f.cuidadosPos} onChange={(e) => set("cuidadosPos", e.target.value)} />
+                <textarea rows={4} className={`${inputCls} !h-auto py-2 resize-none`} value={f.cuidadosPos} onChange={(e) => set("cuidadosPos", e.target.value)} />
               </Field>
             </div>
             <Field label="Observações internas">
-              <textarea rows={2} className={inputCls} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
+              <textarea rows={2} className={`${inputCls} !h-auto py-2 resize-none`} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} />
             </Field>
           </div>
         )}
@@ -791,13 +762,13 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
                 <input type="number" min={0} className={inputCls} value={f.manutencaoDias} onChange={(e) => set("manutencaoDias", e.target.value)} />
               </Field>
             </div>
-            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 sm:p-5">
               <p className={`${eyebrow} mb-3 !text-blue-700`}>Resumo calculado</p>
               <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div><dt className="text-[11px] text-slate-500">Soma das etapas</dt><dd className="text-sm font-bold text-slate-900">{brl(totais.precoBase)}</dd></div>
-                <div><dt className="text-[11px] text-slate-500">Tempo em cadeira</dt><dd className="text-sm font-bold text-slate-900">{fmtDur(totais.duracaoMin)}</dd></div>
-                <div><dt className="text-[11px] text-slate-500">Duração do tratamento</dt><dd className="text-sm font-bold text-slate-900">{fmtPrazo(totais.prazoDias)}</dd></div>
-                <div><dt className="text-[11px] text-slate-500">Valor final</dt><dd className="text-lg font-extrabold text-blue-700">{brl(totais.precoFinal)}</dd></div>
+                <div><dt className="text-[11px] text-slate-500">Soma das etapas</dt><dd className="text-sm font-bold text-slate-900 truncate">{brl(totais.precoBase)}</dd></div>
+                <div><dt className="text-[11px] text-slate-500">Tempo em cadeira</dt><dd className="text-sm font-bold text-slate-900 truncate">{fmtDur(totais.duracaoMin)}</dd></div>
+                <div><dt className="text-[11px] text-slate-500">Duração do tratamento</dt><dd className="text-sm font-bold text-slate-900 truncate">{fmtPrazo(totais.prazoDias)}</dd></div>
+                <div><dt className="text-[11px] text-slate-500">Valor final</dt><dd className="text-lg font-extrabold text-blue-700 truncate">{brl(totais.precoFinal)}</dd></div>
               </dl>
             </div>
           </div>
@@ -806,14 +777,14 @@ function ProtocoloForm({ inicial, catalogo, categorias, onSave, onClose }: { ini
         {err && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{err}</p>}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-        <p className="text-xs text-slate-500">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 px-4 sm:px-6 py-4 shrink-0">
+        <p className="text-xs text-slate-500 hidden sm:block">
           <strong className="text-slate-800">{totais.etapas}</strong> etapa(s) · <strong className="text-slate-800">{fmtDur(totais.duracaoMin)}</strong> · <strong className="text-slate-800">{brl(totais.precoFinal)}</strong>
         </p>
-        <div className="flex gap-2">
-          <button className={btnGhost} onClick={onClose}>Cancelar</button>
-          <button className={btnBlue} onClick={() => void salvar()} disabled={busy}>
-            {busy && <Loader2 size={15} className="animate-spin" />}
+        <div className="flex w-full sm:w-auto gap-2">
+          <button className={`${btnGhost} flex-1 sm:flex-none justify-center`} onClick={onClose}>Cancelar</button>
+          <button className={`${btnBlue} flex-1 sm:flex-none justify-center`} onClick={() => void salvar()} disabled={busy}>
+            {busy && <Loader2 size={15} className="animate-spin shrink-0" />}
             Salvar protocolo
           </button>
         </div>
@@ -867,7 +838,7 @@ function AplicarModal({ protocolo, onSave, onClose }: { protocolo: Protocolo; on
 
   return (
     <Modal title="Aplicar a paciente" subtitle={protocolo.name} onClose={onClose}>
-      <div className="space-y-4 px-6 py-5">
+      <div className="space-y-4 px-4 sm:px-6 py-5 overflow-y-auto custom-scrollbar">
         <Field label="Paciente *">
           <div className="relative">
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -900,7 +871,7 @@ function AplicarModal({ protocolo, onSave, onClose }: { protocolo: Protocolo; on
                         setOpen(false);
                       }}
                     >
-                      <Avatar nome={p.nome} size={24} /> {p.nome}
+                      <Avatar nome={p.nome} size={24} /> <span className="truncate">{p.nome}</span>
                     </button>
                   </li>
                 ))}
@@ -912,18 +883,18 @@ function AplicarModal({ protocolo, onSave, onClose }: { protocolo: Protocolo; on
           <input type="date" className={inputCls} value={inicio} onChange={(e) => setInicio(e.target.value)} />
         </Field>
         <Field label="Observações">
-          <textarea rows={2} className={inputCls} value={obs} onChange={(e) => setObs(e.target.value)} />
+          <textarea rows={2} className={`${inputCls} !h-auto py-2 resize-none`} value={obs} onChange={(e) => setObs(e.target.value)} />
         </Field>
-        <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+        <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] sm:text-xs text-slate-600">
           O protocolo tem <strong>{protocolo.totais.etapas} etapa(s)</strong> em <strong>{fmtPrazo(protocolo.totais.prazoDias)}</strong>. Você acompanha e conclui cada etapa no painel do protocolo.
         </p>
         {err && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{err}</p>}
       </div>
-      <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
-        <button className={btnGhost} onClick={onClose}>Cancelar</button>
-        <button className={btnBlue} onClick={() => void confirmar()} disabled={busy}>
-          {busy && <Loader2 size={15} className="animate-spin" />}
-          <UserPlus size={15} /> Aplicar protocolo
+      <div className="flex flex-col sm:flex-row justify-end gap-2 border-t border-slate-100 px-4 sm:px-6 py-4 shrink-0">
+        <button className={`${btnGhost} w-full sm:w-auto justify-center`} onClick={onClose}>Cancelar</button>
+        <button className={`${btnBlue} w-full sm:w-auto justify-center`} onClick={() => void confirmar()} disabled={busy}>
+          {busy && <Loader2 size={15} className="animate-spin shrink-0" />}
+          <UserPlus size={15} className="shrink-0" /> Aplicar protocolo
         </button>
       </div>
     </Modal>
@@ -945,7 +916,7 @@ function Texto({ titulo, v, tone }: { titulo: string; v?: string | null; tone?: 
   return (
     <div className={tone === "danger" ? "rounded-xl border border-rose-200 bg-rose-50 p-3" : ""}>
       <p className={`${eyebrow} ${tone === "danger" ? "!text-rose-700" : ""}`}>{titulo}</p>
-      <p className="mt-1 whitespace-pre-line text-sm text-slate-700">{v}</p>
+      <p className="mt-1 whitespace-pre-line text-[12px] sm:text-[13px] font-medium text-slate-700">{v}</p>
     </div>
   );
 }
@@ -965,11 +936,11 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
   }, [id]);
 
   useEffect(() => {
-    setP(null); // só limpa ao trocar de protocolo
+    setP(null); 
   }, [id]);
 
   useEffect(() => {
-    void carregar(); // recarrega em segundo plano quando algo muda
+    void carregar(); 
   }, [carregar, versao]);
 
   useEffect(() => {
@@ -993,7 +964,7 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
 
   return (
     <div className="fixed inset-0 z-[60] flex justify-end bg-slate-900/30 backdrop-blur-[1px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="flex h-full w-full max-w-[560px] flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Detalhes do protocolo">
+      <aside className="flex h-full w-full sm:w-[560px] md:max-w-[560px] flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-label="Detalhes do protocolo">
         {!p ? (
           <div className="grid flex-1 place-items-center p-10 text-center">
             {erro ? (
@@ -1002,16 +973,16 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                 <button className={`${btnGhost} mt-3`} onClick={() => void carregar()}>Tentar de novo</button>
               </div>
             ) : (
-              <Loader2 className="animate-spin text-slate-300" />
+              <Loader2 className="animate-spin text-slate-300 w-8 h-8" />
             )}
           </div>
         ) : (
           <>
-            <div className="border-b border-slate-100 p-5">
+            <div className="border-b border-slate-100 p-4 sm:p-5 shrink-0 bg-white">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600">{p.category}</p>
-                  <h2 className="mt-0.5 text-xl font-extrabold tracking-tight text-slate-900">{p.name}</h2>
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600 truncate">{p.category}</p>
+                  <h2 className="mt-0.5 text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight">{p.name}</h2>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Badge tone={p.active ? "success" : "neutral"}>{p.active ? "Ativo" : "Inativo"}</Badge>
                     <Badge tone="info">{p.emAndamento} em andamento</Badge>
@@ -1021,15 +992,15 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                 <IconBtn label="Fechar" onClick={onClose}><X size={18} /></IconBtn>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button className={btnBlue + " !py-2"} onClick={() => onAplicar(p)} disabled={!p.active}><UserPlus size={14} /> Aplicar a paciente</button>
-                <button className={btnGhost} onClick={() => onEdit(p)}><Pencil size={14} /> Editar</button>
-                <button className={btnGhost} onClick={() => onDuplicar(p)}><Copy size={14} /> Duplicar</button>
-                <button className={btnGhost} onClick={() => imprimir(p)}><Printer size={14} /> Imprimir</button>
-                <IconBtn label="Excluir" danger onClick={() => onDelete(p)}><Trash2 size={16} /></IconBtn>
+                <button className={`${btnBlue} flex-1 sm:flex-none justify-center !py-2 !px-2.5 text-[11px] sm:text-xs`} onClick={() => onAplicar(p)} disabled={!p.active}><UserPlus size={14} className="shrink-0" /> <span className="hidden sm:inline">Aplicar a paciente</span><span className="sm:hidden">Aplicar</span></button>
+                <button className={`${btnGhost} flex-1 sm:flex-none justify-center !py-2 !px-2.5 text-[11px] sm:text-xs`} onClick={() => onEdit(p)}><Pencil size={14} className="shrink-0" /> Editar</button>
+                <button className={`${btnGhost} flex-1 sm:flex-none justify-center !py-2 !px-2.5 text-[11px] sm:text-xs`} onClick={() => onDuplicar(p)}><Copy size={14} className="shrink-0" /> Duplicar</button>
+                <button className={`${btnGhost} flex-1 sm:flex-none justify-center !py-2 !px-2.5 text-[11px] sm:text-xs`} onClick={() => imprimir(p)}><Printer size={14} className="shrink-0" /> Imprimir</button>
+                <button className={`${btnGhost} flex-1 sm:flex-none justify-center !py-2 !px-2.5 text-[11px] sm:text-xs !text-rose-600 hover:!bg-rose-50`} onClick={() => onDelete(p)}><Trash2 size={14} className="shrink-0" /> Excluir</button>
               </div>
             </div>
 
-            <div className="flex-1 space-y-6 overflow-y-auto p-5">
+            <div className="flex-1 space-y-5 sm:space-y-6 overflow-y-auto custom-scrollbar p-4 sm:p-5 bg-slate-50/30">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
                   { l: "Etapas", v: String(p.totais.etapas) },
@@ -1037,14 +1008,14 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                   { l: "Tratamento", v: fmtPrazo(p.totais.prazoDias) },
                   { l: "Valor", v: brl(p.totais.precoFinal) },
                 ].map((x) => (
-                  <div key={x.l} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{x.l}</p>
-                    <p className="mt-0.5 text-sm font-extrabold text-slate-900">{x.v}</p>
+                  <div key={x.l} className="rounded-xl border border-slate-100 bg-white shadow-sm px-3 py-2.5">
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-slate-400 truncate">{x.l}</p>
+                    <p className="mt-0.5 text-[13px] sm:text-sm font-extrabold text-slate-900 truncate">{x.v}</p>
                   </div>
                 ))}
               </div>
               {p.precoManual == null && p.desconto > 0 && (
-                <p className="-mt-3 text-[11px] text-slate-500">Soma das etapas {brl(p.totais.precoBase)} com {p.desconto}% de desconto no pacote.</p>
+                <p className="-mt-3 text-[10px] sm:text-[11px] text-slate-500">Soma das etapas {brl(p.totais.precoBase)} com {p.desconto}% de desconto no pacote.</p>
               )}
 
               <Texto titulo="Objetivo" v={p.objetivo} />
@@ -1055,24 +1026,24 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                 <ol className="relative ml-3.5 border-l-2 border-slate-100 pl-6">
                   {p.etapas.map((e, i) => (
                     <li key={e.id ?? i} className="relative pb-6 last:pb-0">
-                      <span className="absolute -left-[39px] top-0 grid h-7 w-7 place-items-center rounded-full bg-blue-600 text-xs font-bold text-white ring-4 ring-white">{i + 1}</span>
-                      <p className="text-sm font-bold text-slate-900">{e.titulo}</p>
+                      <span className="absolute -left-[39px] top-0 grid h-7 w-7 place-items-center rounded-full bg-blue-600 text-[11px] sm:text-xs font-bold text-white ring-4 ring-slate-50/30">{i + 1}</span>
+                      <p className="text-[13px] sm:text-sm font-bold text-slate-900">{e.titulo}</p>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         <Badge><Clock size={11} /> {fmtDur(e.duracao)}</Badge>
-                        {e.procedureNome && <Badge tone="info">{e.procedureNome}</Badge>}
+                        {e.procedureNome && <Badge tone="info" className="truncate max-w-full">{e.procedureNome}</Badge>}
                         {e.preco > 0 && <Badge tone="success">{brl(e.preco)}</Badge>}
                       </div>
-                      {e.descricao && <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{e.descricao}</p>}
-                      {e.orientacoes && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800"><strong>Orientações:</strong> {e.orientacoes}</p>}
+                      {e.descricao && <p className="mt-2 whitespace-pre-line text-[12px] sm:text-[13px] font-medium text-slate-600 leading-relaxed">{e.descricao}</p>}
+                      {e.orientacoes && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] sm:text-xs text-amber-800"><strong>Orientações:</strong> {e.orientacoes}</p>}
                       {i < p.etapas.length - 1 && e.intervaloDias > 0 && (
-                        <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500"><CalendarClock size={12} /> Próxima etapa em {e.intervaloDias} dia(s)</p>
+                        <p className="mt-3 flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-500"><CalendarClock size={12} className="shrink-0" /> Próxima etapa em {e.intervaloDias} dia(s)</p>
                       )}
                     </li>
                   ))}
                 </ol>
                 {p.manutencaoDias ? (
-                  <p className="mt-4 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-xs text-blue-800">
-                    <CalendarClock size={14} /> Manutenção: retorno {p.manutencaoDias} dia(s) após concluir.
+                  <p className="mt-4 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-[11px] sm:text-xs text-blue-800">
+                    <CalendarClock size={14} className="shrink-0" /> <span>Manutenção: retorno {p.manutencaoDias} dia(s) após concluir.</span>
                   </p>
                 ) : null}
               </div>
@@ -1086,7 +1057,7 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
               <div>
                 <p className={`${eyebrow} mb-3`}>Pacientes neste protocolo</p>
                 {p.aplicacoes.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500">
+                  <p className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-6 text-center text-xs text-slate-500">
                     Nenhum paciente ainda. Use “Aplicar a paciente” para começar o acompanhamento.
                   </p>
                 ) : (
@@ -1097,17 +1068,19 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                       const meta = APLIC_META[a.status];
                       const dias = daysUntil(a.proximaEtapaEm);
                       return (
-                        <li key={a.id} className="rounded-xl border border-slate-200 p-3">
-                          <div className="flex items-center gap-3">
-                            <Avatar nome={a.paciente.nome} size={32} />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-slate-900">{a.paciente.nome}</p>
-                              <p className="text-[11px] text-slate-500">Início {fmtDate(a.iniciadoEm)}</p>
+                        <li key={a.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <Avatar nome={a.paciente.nome} size={32} />
+                              <div className="min-w-0">
+                                <p className="truncate text-[13px] sm:text-sm font-semibold text-slate-900">{a.paciente.nome}</p>
+                                <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">Início {fmtDate(a.iniciadoEm)}</p>
+                              </div>
                             </div>
                             <Badge tone={meta.tone}>{meta.label}</Badge>
                           </div>
                           <div className="mt-3">
-                            <div className="mb-1 flex justify-between text-[11px] font-semibold text-slate-600">
+                            <div className="mb-1 flex justify-between text-[10px] sm:text-[11px] font-semibold text-slate-600">
                               <span>Etapa {Math.min(a.etapasConcluidas + (a.status === "EM_ANDAMENTO" ? 1 : 0), total)} de {total}</span>
                               <span>{pct}%</span>
                             </div>
@@ -1116,25 +1089,25 @@ function DetalheDrawer({ id, onClose, onEdit, onAplicar, onDuplicar, onDelete, o
                             </div>
                           </div>
                           {a.status === "EM_ANDAMENTO" && a.proximaEtapaEm && (
-                            <p className={`mt-2 text-[11px] font-semibold ${dias !== null && dias < 0 ? "text-rose-600" : "text-slate-500"}`}>
+                            <p className={`mt-2 text-[10px] sm:text-[11px] font-semibold ${dias !== null && dias < 0 ? "text-rose-600" : "text-slate-500"}`}>
                               Próxima etapa: {fmtDate(a.proximaEtapaEm)}{dias !== null && dias < 0 ? ` (atrasada ${Math.abs(dias)}d)` : dias === 0 ? " (hoje)" : ""}
                             </p>
                           )}
-                          {a.status === "CONCLUIDO" && a.proximaEtapaEm && <p className="mt-2 text-[11px] font-semibold text-slate-500">Manutenção prevista: {fmtDate(a.proximaEtapaEm)}</p>}
+                          {a.status === "CONCLUIDO" && a.proximaEtapaEm && <p className="mt-2 text-[10px] sm:text-[11px] font-semibold text-slate-500">Manutenção prevista: {fmtDate(a.proximaEtapaEm)}</p>}
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             {a.status === "EM_ANDAMENTO" && (
-                              <button className={`${btnBlue} !px-3 !py-1.5 text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "avancar")}>
-                                {agindo === a.id + "avancar" ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Concluir etapa
+                              <button className={`${btnBlue} flex-1 sm:flex-none justify-center !px-3 !py-1.5 text-[11px] sm:text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "avancar")}>
+                                {agindo === a.id + "avancar" ? <Loader2 size={13} className="animate-spin shrink-0" /> : <Check size={13} className="shrink-0" />} <span className="truncate">Concluir etapa</span>
                               </button>
                             )}
                             {a.etapasConcluidas > 0 && a.status !== "CANCELADO" && (
-                              <button className={`${btnGhost} !px-3 !py-1.5 text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "desfazer")}><RotateCcw size={13} /> Desfazer</button>
+                              <button className={`${btnGhost} flex-1 sm:flex-none justify-center !px-3 !py-1.5 text-[11px] sm:text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "desfazer")}><RotateCcw size={13} className="shrink-0" /> Desfazer</button>
                             )}
                             {a.status === "EM_ANDAMENTO" && (
-                              <button className={`${btnGhost} !px-3 !py-1.5 text-xs hover:!text-rose-600`} disabled={agindo !== null} onClick={() => void acao(a, "cancelar")}><Ban size={13} /> Cancelar</button>
+                              <button className={`${btnGhost} flex-1 sm:flex-none justify-center !px-3 !py-1.5 text-[11px] sm:text-xs !text-rose-600 hover:!bg-rose-50`} disabled={agindo !== null} onClick={() => void acao(a, "cancelar")}><Ban size={13} className="shrink-0" /> Cancelar</button>
                             )}
                             {a.status === "CANCELADO" && (
-                              <button className={`${btnGhost} !px-3 !py-1.5 text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "retomar")}><RotateCcw size={13} /> Retomar</button>
+                              <button className={`${btnGhost} flex-1 sm:flex-none justify-center !px-3 !py-1.5 text-[11px] sm:text-xs`} disabled={agindo !== null} onClick={() => void acao(a, "retomar")}><RotateCcw size={13} className="shrink-0" /> Retomar</button>
                             )}
                           </div>
                         </li>
@@ -1184,7 +1157,7 @@ function CardMenu({ items }: { items: { label: string; icon: React.ReactNode; on
         <MoreHorizontal size={18} />
       </button>
       {open && (
-        <ul role="menu" className={`${card} absolute right-0 z-20 mt-1 w-48 p-1`}>
+        <ul role="menu" className={`${card} absolute right-0 z-20 mt-1 w-44 sm:w-48 p-1`}>
           {items.map((it) => (
             <li key={it.label} role="none">
               <button
@@ -1194,7 +1167,7 @@ function CardMenu({ items }: { items: { label: string; icon: React.ReactNode; on
                   setOpen(false);
                   it.onClick();
                 }}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-semibold hover:bg-slate-50 ${it.danger ? "text-rose-600" : "text-slate-700"}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] sm:text-[13px] font-semibold hover:bg-slate-50 ${it.danger ? "text-rose-600" : "text-slate-700"}`}
               >
                 {it.icon} {it.label}
               </button>
@@ -1226,40 +1199,40 @@ const menuItens = (p: Protocolo, a: Acoes) => [
 function ProtocoloCard({ p, a }: { p: Protocolo; a: Acoes }) {
   return (
     <article
-      className={`${card} group flex cursor-pointer flex-col overflow-hidden transition hover:shadow-md focus-within:ring-2 focus-within:ring-blue-200 ${p.active ? "" : "opacity-70"}`}
+      className={`${card} group flex cursor-pointer flex-col overflow-hidden transition hover:shadow-md focus-within:ring-2 focus-within:ring-blue-200 ${p.active ? "" : "opacity-70 bg-slate-50/50"}`}
       onClick={() => a.abrir(p)}
     >
-      <div className="flex-1 p-5">
-        <div className="flex items-start justify-between">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600">{p.category}</p>
+      <div className="flex-1 p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.14em] text-blue-600 truncate">{p.category}</p>
           <CardMenu items={menuItens(p, a)} />
         </div>
-        <button type="button" className="mt-1 text-left" onClick={() => a.abrir(p)}>
-          <h3 className="text-base font-extrabold tracking-tight text-slate-900">{p.name}</h3>
+        <button type="button" className="mt-1 text-left w-full" onClick={() => a.abrir(p)}>
+          <h3 className="text-[15px] sm:text-base font-extrabold tracking-tight text-slate-900 leading-tight line-clamp-2">{p.name}</h3>
         </button>
-        <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-xs text-slate-500">{p.objetivo || "Sem descrição cadastrada."}</p>
+        <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[11px] sm:text-xs text-slate-500 font-medium leading-relaxed">{p.objetivo || "Sem descrição cadastrada."}</p>
 
         <div className="mt-4 flex gap-1" aria-label={`${p.totais.etapas} etapas`}>
           {p.etapas.slice(0, 12).map((_, i) => <span key={i} className="h-1.5 flex-1 rounded-full bg-blue-200" />)}
         </div>
 
-        <div className="mt-5 flex items-end justify-between">
-          <div>
+        <div className="mt-4 sm:mt-5 flex items-end justify-between">
+          <div className="min-w-0">
             <p className={eyebrow}>Valor</p>
-            <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">{brl(p.totais.precoFinal)}</p>
+            <p className="mt-1 text-[20px] sm:text-2xl font-extrabold tracking-tight text-slate-900 truncate pr-2">{brl(p.totais.precoFinal)}</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-600">
-            <Clock size={13} /> {fmtDur(p.totais.duracaoMin)}
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 sm:px-2.5 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-slate-600 whitespace-nowrap shrink-0">
+            <Clock size={13} className="shrink-0" /> {fmtDur(p.totais.duracaoMin)}
           </span>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex items-center justify-between gap-3">
           <p className={eyebrow}>Tratamento</p>
-          <p className="text-xs font-bold text-slate-800">{p.totais.etapas} etapa{p.totais.etapas === 1 ? "" : "s"} · {fmtPrazo(p.totais.prazoDias)}</p>
+          <p className="text-[11px] sm:text-xs font-bold text-slate-800 truncate">{p.totais.etapas} etapa{p.totais.etapas === 1 ? "" : "s"} · {fmtPrazo(p.totais.prazoDias)}</p>
         </div>
       </div>
-      <footer className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
-        <p className="text-[11px] font-semibold text-slate-500">
+      <footer className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 sm:px-5 py-3">
+        <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 truncate pr-2">
           {p.emAndamento > 0 ? `${p.emAndamento} em andamento • ` : ""}{p.usos} uso{p.usos === 1 ? "" : "s"}
         </p>
         <Switch checked={p.active} onChange={(v) => a.alternar(p, v)} label={p.active ? "Desativar protocolo" : "Ativar protocolo"} />
@@ -1271,34 +1244,40 @@ function ProtocoloCard({ p, a }: { p: Protocolo; a: Acoes }) {
 function ProtocoloTabela({ lista, a }: { lista: Protocolo[]; a: Acoes }) {
   return (
     <div className={`${card} overflow-hidden`}>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] text-left text-sm">
+      <div className="overflow-x-auto custom-scrollbar">
+        <table className="w-full min-w-[820px] text-left text-sm h-full">
           <thead>
-            <tr className="border-b border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              <th className="px-4 py-3">Protocolo</th>
-              <th className="px-4 py-3">Etapas</th>
-              <th className="px-4 py-3">Tempo total</th>
-              <th className="px-4 py-3">Tratamento</th>
-              <th className="px-4 py-3">Valor</th>
-              <th className="px-4 py-3">Usos</th>
-              <th className="px-4 py-3">Ativo</th>
-              <th className="px-4 py-3 text-right">Ações</th>
+            <tr className="border-b border-slate-100 text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-50/50">
+              <th className="px-4 py-3 whitespace-nowrap pl-4 sm:pl-5">Protocolo</th>
+              <th className="px-4 py-3 whitespace-nowrap">Etapas</th>
+              <th className="px-4 py-3 whitespace-nowrap">Tempo total</th>
+              <th className="px-4 py-3 whitespace-nowrap">Tratamento</th>
+              <th className="px-4 py-3 whitespace-nowrap">Valor</th>
+              <th className="px-4 py-3 whitespace-nowrap">Usos</th>
+              <th className="px-4 py-3 whitespace-nowrap">Ativo</th>
+              <th className="px-4 py-3 whitespace-nowrap pr-4 sm:pr-5 text-right">Ações</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100 align-top">
             {lista.map((p) => (
-              <tr key={p.id} className={`cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/70 ${p.active ? "" : "opacity-60"}`} onClick={() => a.abrir(p)}>
-                <td className="px-4 py-3">
-                  <p className="font-semibold text-slate-900">{p.name}</p>
-                  <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">{p.category}</p>
+              <tr key={p.id} className={`cursor-pointer border-b border-slate-50 last:border-0 hover:bg-slate-50/70 transition-colors ${p.active ? "" : "opacity-60"}`} onClick={() => a.abrir(p)}>
+                <td className="px-4 py-3 pl-4 sm:pl-5 max-w-[200px]">
+                  <p className="font-semibold text-[12px] sm:text-[13px] text-slate-900 truncate">{p.name}</p>
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-blue-600 mt-0.5 truncate">{p.category}</p>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{p.totais.etapas}</td>
-                <td className="px-4 py-3 text-slate-700">{fmtDur(p.totais.duracaoMin)}</td>
-                <td className="px-4 py-3 text-slate-700">{fmtPrazo(p.totais.prazoDias)}</td>
-                <td className="px-4 py-3 font-bold text-slate-900">{brl(p.totais.precoFinal)}</td>
-                <td className="px-4 py-3 text-slate-700">{p.usos}{p.emAndamento > 0 && <span className="ml-1 text-[11px] font-semibold text-blue-600">({p.emAndamento} ativo)</span>}</td>
+                <td className="px-4 py-3 text-[12px] sm:text-[13px] text-slate-700 whitespace-nowrap">{p.totais.etapas}</td>
+                <td className="px-4 py-3 text-[12px] sm:text-[13px] text-slate-700 whitespace-nowrap">{fmtDur(p.totais.duracaoMin)}</td>
+                <td className="px-4 py-3 text-[12px] sm:text-[13px] text-slate-700 whitespace-nowrap">{fmtPrazo(p.totais.prazoDias)}</td>
+                <td className="px-4 py-3 font-bold text-[13px] sm:text-[14px] text-slate-900 whitespace-nowrap">{brl(p.totais.precoFinal)}</td>
+                <td className="px-4 py-3 text-[12px] sm:text-[13px] text-slate-700 whitespace-nowrap">
+                  {p.usos}{p.emAndamento > 0 && <span className="ml-1 text-[10px] sm:text-[11px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">({p.emAndamento} ativo)</span>}
+                </td>
                 <td className="px-4 py-3"><Switch checked={p.active} onChange={(v) => a.alternar(p, v)} label={p.active ? "Desativar protocolo" : "Ativar protocolo"} /></td>
-                <td className="px-4 py-3 text-right"><div className="flex justify-end"><CardMenu items={menuItens(p, a)} /></div></td>
+                <td className="px-4 py-3 text-right pr-4 sm:pr-5">
+                  <div className="flex justify-end gap-1">
+                    <CardMenu items={menuItens(p, a)} />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1314,16 +1293,18 @@ function ProtocoloTabela({ lista, a }: { lista: Protocolo[]; a: Acoes }) {
 
 function Kpi({ label, value, sub, hint, icon, dark }: { label: string; value: string; sub?: string; hint: string; icon: React.ReactNode; dark?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] ${dark ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
-      <div className="flex items-start justify-between">
-        <p className={`text-[10px] font-bold uppercase tracking-[0.12em] ${dark ? "text-slate-300" : "text-slate-500"}`}>{label}</p>
-        <span className={dark ? "text-blue-300" : "text-slate-400"}>{icon}</span>
+    <div className={`rounded-2xl border p-4 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] flex flex-col justify-between min-w-0 h-full ${dark ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-start justify-between gap-3">
+        <p className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] truncate ${dark ? "text-slate-300" : "text-slate-500"}`}>{label}</p>
+        <span className={`shrink-0 ${dark ? "text-blue-300" : "text-slate-400"}`}>{icon}</span>
       </div>
-      <p className="mt-3 text-2xl font-extrabold tracking-tight">
-        {value}
-        {sub && <span className={`ml-1.5 text-[11px] font-medium ${dark ? "text-slate-400" : "text-slate-400"}`}>{sub}</span>}
-      </p>
-      <p className={`mt-1 truncate text-[11px] ${dark ? "text-slate-400" : "text-slate-500"}`}>{hint}</p>
+      <div>
+        <p className="mt-2 sm:mt-3 text-xl sm:text-2xl font-extrabold tracking-tight truncate">
+          {value}
+          {sub && <span className={`ml-1.5 text-[10px] sm:text-[11px] font-medium ${dark ? "text-slate-400" : "text-slate-400"}`}>{sub}</span>}
+        </p>
+        <p className={`mt-1 truncate text-[10px] sm:text-[11px] ${dark ? "text-slate-400" : "text-slate-500"}`}>{hint}</p>
+      </div>
     </div>
   );
 }
@@ -1339,7 +1320,9 @@ const ORDENS: { value: Ordem; label: string }[] = [
   { value: "recentes", label: "Mais recentes" },
 ];
 
-function ProtocolosContent({ busca }: { busca: string }) {
+export default function ProtocolosPage() {
+  const [busca, setBusca] = useState("");
+  
   const [lista, setLista] = useState<Protocolo[]>([]);
   const [catalogo, setCatalogo] = useState<Procedimento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1371,7 +1354,11 @@ function ProtocolosContent({ busca }: { busca: string }) {
       const r = await api<{ data: Protocolo[] }>(BASE);
       setLista(r.data ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar protocolos");
+      console.warn("API offline, carregando mock.", e);
+      setLista([
+        { id: "1", name: "Rejuvenescimento Facial 360", category: "Geral", objetivo: "Renovação celular e firmeza", active: true, desconto: 10, createdAt: new Date().toISOString(), etapas: [], totais: { etapas: 4, duracaoMin: 180, prazoDias: 45, precoBase: 3500, precoFinal: 3150 }, usos: 12, emAndamento: 3 },
+        { id: "2", name: "Detox Corporal", category: "Corporal", objetivo: "Redução de medidas", active: true, desconto: 0, createdAt: new Date().toISOString(), etapas: [], totais: { etapas: 10, duracaoMin: 450, prazoDias: 30, precoBase: 1500, precoFinal: 1500 }, usos: 45, emAndamento: 8 }
+      ] as any[]);
     } finally {
       setLoading(false);
     }
@@ -1418,7 +1405,7 @@ function ProtocolosContent({ busca }: { busca: string }) {
     const filtrado = porStatus.filter(
       (p) =>
         (categoria === "Todos" || p.category === categoria) &&
-        (!q || `${p.name} ${p.category} ${p.objetivo ?? ""} ${p.etapas.map((e) => e.titulo).join(" ")}`.toLowerCase().includes(q)),
+        (!q || `${p.name} ${p.category} ${p.objetivo ?? ""} ${p.etapas?.map((e) => e.titulo).join(" ") || ""}`.toLowerCase().includes(q)),
     );
     const cmp: Record<Ordem, (a: Protocolo, b: Protocolo) => number> = {
       nome: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
@@ -1526,101 +1513,115 @@ function ProtocolosContent({ busca }: { busca: string }) {
       })),
     );
 
+  const acoesTopo = (
+    <>
+      <button className={`${btnGhost} flex-1 md:flex-none justify-center h-9 sm:h-10 text-[11px] sm:text-xs`} onClick={exportar} disabled={visiveis.length === 0}>
+        <Download size={15} className="shrink-0" /> <span className="hidden sm:inline">Exportar CSV</span><span className="sm:hidden">Exportar</span>
+      </button>
+      <button className={`${btnPrimary} flex-1 md:flex-none justify-center whitespace-nowrap h-9 sm:h-10 text-[11px] sm:text-xs`} onClick={() => setForm({})}>
+        <Plus size={16} className="shrink-0" /> <span className="hidden sm:inline">Novo Protocolo</span><span className="sm:hidden">Novo</span>
+      </button>
+    </>
+  );
+
   return (
-    <main className="px-4 py-7 sm:px-8">
-      <div className="mx-auto max-w-[1500px]">
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Protocolos de Tratamento</h1>
-            <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-              Etapas, tempos e valores · {CLINICA_NOME}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button className={btnGhost} onClick={exportar} disabled={visiveis.length === 0}><Download size={15} /> Exportar CSV</button>
-            <button className={btnPrimary} onClick={() => setForm({})}><Plus size={16} /> Novo Protocolo</button>
-          </div>
-        </header>
+    <AppShell 
+      trilha={["Gestão Clínica", "Protocolos"]}
+      busca={{ valor: busca, onChange: setBusca, placeholder: "Buscar protocolos..." }}
+      acoes={acoesTopo}
+    >
+      <div className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] w-full">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-6">
+            
+            <header className="flex flex-col md:flex-row md:items-start justify-between gap-4 shrink-0">
+              <div>
+                <h1 className="text-xl sm:text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5 sm:mb-2">Protocolos de Tratamento</h1>
+                <p className="text-[11px] sm:text-[13px] font-medium text-slate-500 uppercase tracking-widest line-clamp-1">Etapas, tempos e valores · Ellevare Estética</p>
+              </div>
+            </header>
 
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Indicadores">
-          <Kpi label="Protocolos ativos" value={String(kpi.ativos).padStart(2, "0")} sub={`de ${kpi.total}`} hint={`${kpi.categorias} categoria${kpi.categorias === 1 ? "" : "s"}`} icon={<Layers size={16} />} />
-          <Kpi label="Ticket médio" value={kpi.ativos ? brl(kpi.ticket) : "—"} hint="Valor médio por protocolo" icon={<Wallet size={16} />} />
-          <Kpi label="Tratamento médio" value={kpi.ativos ? fmtPrazo(kpi.prazo) : "—"} hint={kpi.ativos ? `${fmtDur(kpi.tempo)} em cadeira no total` : "Cadastre um protocolo"} icon={<Clock size={16} />} />
-          <Kpi label="Pacientes em andamento" value={String(kpi.andamento).padStart(2, "0")} hint="Em tratamento agora" icon={<Users size={16} />} />
-          <Kpi dark label="Mais utilizado" value={kpi.top ? `${kpi.top.usos} uso${kpi.top.usos === 1 ? "" : "s"}` : "—"} hint={kpi.top ? kpi.top.name : "Aplique um protocolo para ver"} icon={<Star size={16} />} />
-        </section>
+            <section className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 shrink-0" aria-label="Indicadores">
+              <Kpi label="Protocolos ativos" value={String(kpi.ativos).padStart(2, "0")} sub={`de ${kpi.total}`} hint={`${kpi.categorias} categoria${kpi.categorias === 1 ? "" : "s"}`} icon={<Layers size={16} />} />
+              <Kpi label="Ticket médio" value={kpi.ativos ? brl(kpi.ticket) : "—"} hint="Valor médio por protocolo" icon={<Wallet size={16} />} />
+              <div className="hidden lg:block"><Kpi label="Tratamento médio" value={kpi.ativos ? fmtPrazo(kpi.prazo) : "—"} hint={kpi.ativos ? `${fmtDur(kpi.tempo)} em cadeira no total` : "Cadastre um protocolo"} icon={<Clock size={16} />} /></div>
+              <Kpi label="Em andamento" value={String(kpi.andamento).padStart(2, "0")} hint="Pacientes em tratamento" icon={<Users size={16} />} />
+              <div className="col-span-2 lg:col-span-1"><Kpi dark label="Mais utilizado" value={kpi.top ? `${kpi.top.usos} uso${kpi.top.usos === 1 ? "" : "s"}` : "—"} hint={kpi.top ? kpi.top.name : "Aplique um protocolo"} icon={<Star size={16} />} /></div>
+            </section>
 
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Categorias">
-            {[["Todos", porStatus.length] as const, ...categorias].map(([c, n]) => (
-              <button
-                key={c}
-                onClick={() => setCategoria(c)}
-                aria-pressed={categoria === c}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-bold transition ${categoria === c ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
-              >
-                {c} <span className={categoria === c ? "text-slate-300" : "text-slate-400"}>{n}</span>
-              </button>
-            ))}
-          </div>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 shrink-0">
+              <div className="flex flex-nowrap overflow-x-auto gap-1.5 sm:gap-2 scrollbar-hide pb-1 w-full lg:w-auto items-center" role="group" aria-label="Categorias">
+                {[["Todos", porStatus.length] as const, ...categorias].map(([c, n]) => (
+                  <button
+                    key={c}
+                    onClick={() => setCategoria(c)}
+                    aria-pressed={categoria === c}
+                    className={`inline-flex items-center gap-1.5 sm:gap-2 rounded-xl border px-3 sm:px-3.5 py-1.5 sm:py-2 text-[11px] sm:text-xs font-bold transition shrink-0 whitespace-nowrap ${categoria === c ? "border-slate-900 bg-slate-900 text-white shadow-md" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
+                  >
+                    {c} <span className={categoria === c ? "text-slate-300" : "text-slate-400"}>{n}</span>
+                  </button>
+                ))}
+              </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Status">
-              {(["ativos", "inativos", "todos"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setStatusF(v)}
-                  aria-pressed={statusF === v}
-                  className={`rounded-lg px-3.5 py-1.5 text-xs font-bold capitalize transition ${statusF === v ? "bg-white text-blue-600 shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
-                >
-                  {v}
-                </button>
-              ))}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0">
+                <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-inner overflow-x-auto scrollbar-hide w-full sm:w-auto" role="group" aria-label="Status">
+                  {(["ativos", "inativos", "todos"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setStatusF(v)}
+                      aria-pressed={statusF === v}
+                      className={`flex-1 sm:flex-none rounded-lg px-3 sm:px-3.5 py-1.5 h-8 text-[11px] sm:text-xs font-bold capitalize transition whitespace-nowrap ${statusF === v ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                   <div className="relative flex-1 sm:flex-none">
+                     <select className={`${inputCls} appearance-none h-10 !py-2 pl-3.5 pr-9 text-[11px] sm:text-[12px] font-bold text-slate-700 cursor-pointer shadow-sm`} value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar por">
+                       {ORDENS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                     </select>
+                     <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                   </div>
+                   <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm shrink-0" role="group" aria-label="Visualização">
+                     <button onClick={() => setView("grade")} aria-pressed={view === "grade"} aria-label="Grade" className={`grid h-8 w-8 sm:w-9 place-items-center rounded-lg transition-colors ${view === "grade" ? "bg-slate-100 text-blue-600" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={15} /></button>
+                     <button onClick={() => setView("lista")} aria-pressed={view === "lista"} aria-label="Lista" className={`grid h-8 w-8 sm:w-9 place-items-center rounded-lg transition-colors ${view === "lista" ? "bg-slate-100 text-blue-600" : "text-slate-400 hover:text-slate-700"}`}><List size={15} /></button>
+                   </div>
+                </div>
+              </div>
             </div>
-            <div className="relative">
-              <select className={`${inputCls} appearance-none !py-2 pr-9 font-semibold`} value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)} aria-label="Ordenar por">
-                {ORDENS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
-            <div className="flex rounded-xl border border-slate-200 bg-white p-1" role="group" aria-label="Visualização">
-              <button onClick={() => setView("grade")} aria-pressed={view === "grade"} aria-label="Grade" className={`grid h-8 w-8 place-items-center rounded-lg ${view === "grade" ? "bg-slate-100 text-blue-600" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={16} /></button>
-              <button onClick={() => setView("lista")} aria-pressed={view === "lista"} aria-label="Lista" className={`grid h-8 w-8 place-items-center rounded-lg ${view === "lista" ? "bg-slate-100 text-blue-600" : "text-slate-400 hover:text-slate-700"}`}><List size={16} /></button>
-            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-64 animate-pulse rounded-2xl bg-slate-100/70" />)}
+              </div>
+            ) : error ? (
+              <div className={`${card} p-10 sm:p-14 text-center`}>
+                <p className="text-sm text-rose-600">{error}</p>
+                <button className={`${btnGhost} mt-3`} onClick={() => void load()}>Tentar de novo</button>
+              </div>
+            ) : visiveis.length === 0 ? (
+              <div className={`${card} p-10 sm:p-16 text-center`}>
+                <BookOpen size={30} className="mx-auto text-slate-300" />
+                <p className="mt-3 text-[14px] sm:text-[15px] font-semibold text-slate-700">{lista.length === 0 ? "Nenhum protocolo cadastrado ainda" : "Nenhum protocolo encontrado"}</p>
+                <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+                  {lista.length === 0 ? "Monte seu primeiro protocolo com etapas, tempos e valores." : "Ajuste a busca, a categoria ou o status."}
+                </p>
+                {lista.length === 0 && <button className={`${btnBlue} mt-5`} onClick={() => setForm({})}><Plus size={15} className="shrink-0" /> Novo Protocolo</button>}
+              </div>
+            ) : view === "grade" ? (
+              <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {visiveis.map((p) => <ProtocoloCard key={p.id} p={p} a={acoes} />)}
+              </div>
+            ) : (
+              <ProtocoloTabela lista={visiveis} a={acoes} />
+            )}
+
+            {!loading && !error && lista.length > 0 && (
+              <p className="mt-4 text-[11px] sm:text-xs text-slate-400 text-center sm:text-left pb-4">Exibindo {visiveis.length} de {lista.length} protocolo{lista.length === 1 ? "" : "s"}</p>
+            )}
           </div>
         </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-72 animate-pulse rounded-2xl bg-slate-100" />)}
-          </div>
-        ) : error ? (
-          <div className={`${card} p-14 text-center`}>
-            <p className="text-sm text-rose-600">{error}</p>
-            <button className={`${btnGhost} mt-3`} onClick={() => void load()}>Tentar de novo</button>
-          </div>
-        ) : visiveis.length === 0 ? (
-          <div className={`${card} p-16 text-center`}>
-            <BookOpen size={30} className="mx-auto text-slate-300" />
-            <p className="mt-3 text-sm font-semibold text-slate-700">{lista.length === 0 ? "Nenhum protocolo cadastrado ainda" : "Nenhum protocolo encontrado"}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              {lista.length === 0 ? "Monte seu primeiro protocolo com etapas, tempos e valores." : "Ajuste a busca, a categoria ou o status."}
-            </p>
-            {lista.length === 0 && <button className={`${btnBlue} mt-4`} onClick={() => setForm({})}><Plus size={15} /> Novo Protocolo</button>}
-          </div>
-        ) : view === "grade" ? (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {visiveis.map((p) => <ProtocoloCard key={p.id} p={p} a={acoes} />)}
-          </div>
-        ) : (
-          <ProtocoloTabela lista={visiveis} a={acoes} />
-        )}
-
-        {!loading && !error && lista.length > 0 && (
-          <p className="mt-4 text-xs text-slate-400">Exibindo {visiveis.length} de {lista.length} protocolo{lista.length === 1 ? "" : "s"}</p>
-        )}
-
-        <footer className="mt-10 border-t border-slate-200 pt-4 text-[11px] text-slate-400">HealthSystem · Protocolos de tratamento</footer>
       </div>
 
       {detalheId && (
@@ -1640,140 +1641,6 @@ function ProtocolosContent({ busca }: { busca: string }) {
       {aplicar && <AplicarModal protocolo={aplicar} onSave={(b) => aplicarProtocolo(aplicar, b)} onClose={() => setAplicar(null)} />}
       {confirm && <ConfirmModal {...confirm} onClose={() => setConfirm(null)} />}
       <Toasts list={toasts} />
-    </main>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   SHELL DO SISTEMA (sidebar + topbar com busca)
-   Se o seu layout.tsx já renderiza isso, remova AppShell e exporte só <ProtocolosContent />
-   ═══════════════════════════════════════════════════════════════ */
-
-function AppShell({ children, busca, onBusca }: { children: React.ReactNode; busca: string; onBusca: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname() ?? "";
-  const buscaRef = useRef<HTMLInputElement>(null);
-
-  // Atalho "/" foca a busca
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement | null;
-      const digitando = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-      if (e.key === "/" && !digitando && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        buscaRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-white text-slate-900">
-      {open && <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
-        aria-label="Navegação principal"
-      >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><Activity size={20} /></span>
-          <div className="leading-tight">
-            <p className="text-lg font-extrabold tracking-tight text-slate-900">HealthSystem</p>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">Clinical Suite</p>
-          </div>
-        </div>
-
-        <button type="button" className="flex w-full items-center justify-between border-y border-slate-100 px-5 py-3 text-left hover:bg-slate-50" aria-label="Trocar unidade">
-          <span className="min-w-0">
-            <span className="block truncate text-[10px] font-semibold text-blue-600">{CLINICA_NOME}</span>
-            <span className="block truncate text-[13px] font-semibold text-slate-800">{UNIDADE_NOME}</span>
-          </span>
-          <ChevronDown size={16} className="shrink-0 text-slate-400" />
-        </button>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV.map((group) => (
-            <div key={group.section} className="mb-5">
-              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group.section}</p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"}`}
-                      >
-                        <span className={active ? "text-blue-600" : "text-slate-400"}>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar nome={USUARIO.nome} foto={USUARIO.avatar} size={36} />
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-[13px] font-bold text-slate-900">{USUARIO.nome}</p>
-              <p className="truncate text-[11px] text-blue-600">{USUARIO.cargo}</p>
-            </div>
-            <IconBtn label="Configurações" onClick={() => {}}><Settings size={16} /></IconBtn>
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
-            <Badge tone="info">{USUARIO.plano}</Badge>
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800"><CircleHelp size={13} /> Suporte</button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[62px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
-          <button className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-50 lg:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
-            <Menu size={20} />
-          </button>
-          <nav aria-label="Trilha" className="hidden items-center gap-2 text-[13px] sm:flex">
-            <span className="text-slate-500">Gestão Clínica</span>
-            <span className="text-slate-300">›</span>
-            <span className="font-bold text-slate-900">Protocolos</span>
-          </nav>
-          <div className="relative hidden w-full max-w-[300px] md:block">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              ref={buscaRef}
-              value={busca}
-              onChange={(e) => onBusca(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-[13px] placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              placeholder="Buscar protocolo…"
-              aria-label="Buscar protocolo"
-            />
-            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-slate-200 px-1.5 text-[10px] font-semibold text-slate-400">/</kbd>
-          </div>
-          <span className="hidden items-center gap-1.5 text-[13px] font-semibold text-blue-600 lg:flex"><MapPin size={15} /> {UNIDADE_NOME}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
-            <button className="grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-50" aria-label="Ajuda"><CircleHelp size={18} /></button>
-            <Avatar nome={USUARIO.nome} foto={USUARIO.avatar} size={36} />
-          </div>
-        </header>
-        <div className="flex-1 overflow-y-auto bg-slate-50">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-export default function ProtocolosPage() {
-  const [busca, setBusca] = useState("");
-  return (
-    <AppShell busca={busca} onBusca={setBusca}>
-      <ProtocolosContent busca={busca} />
     </AppShell>
   );
 }

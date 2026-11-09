@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -21,94 +21,25 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Activity,
-  Bell,
-  BookOpen,
-  CalendarDays,
-  ChevronDown,
-  CircleHelp,
-  ClipboardList,
-  Columns3,
-  FileSignature,
-  Image as ImageIcon,
-  LayoutDashboard,
-  ListChecks,
-  MapPin,
-  Menu,
-  Settings,
-  Star,
-  Stethoscope,
-  Users,
-  Receipt,
-  Landmark,
-} from "lucide-react";
+
+import { AppShell } from "../../components/AppShell"; // Ajuste o caminho se necessário
 
 /* ═══════════════════════════════════════════════════════════════
-   CONFIG — único lugar que depende do backend
+   CONFIG
    ═══════════════════════════════════════════════════════════════ */
 
-const CLINICA_NOME = "Ellevare Estética Avançada";
-const UNIDADE_NOME = "Unidade Av Saudade (Matriz)";
-const USUARIO = {
-  nome: "Dra. Joana Oliveira",
-  cargo: "Diretora Médica & Sócia",
-  avatar: "", // URL da foto; vazio = iniciais
-  plano: "Plano Enterprise",
-};
-
-/** Menu lateral. Ajuste os href para as rotas reais do seu app. */
-const NAV: { section: string; items: { label: string; href: string; icon: React.ReactNode }[] }[] = [
-  {
-    section: "Visão geral",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} /> },
-      { label: "Central de Notificações", href: "/notificacoes", icon: <Bell size={18} /> },
-    ],
-  },
-  {
-    section: "Operação",
-    items: [
-      { label: "Agenda da Dra. Joana", href: "/agenda", icon: <CalendarDays size={18} /> },
-      { label: "Clientes", href: "/clientes", icon: <Users size={18} /> },
-      { label: "CRM Kanban", href: "/crm", icon: <Columns3 size={18} /> },
-      { label: "Procedimentos", href: "/procedimentos", icon: <Stethoscope size={18} /> },
-      { label: "Recursos", href: "/recursos", icon: <Boxes size={18} /> },
-      { label: "Lista de Espera", href: "/lista-de-espera", icon: <ListChecks size={18} /> },
-    ],
-  },
-  {
-    section: "Gestão clínica",
-    items: [
-      { label: "Prontuários", href: "/prontuarios", icon: <ClipboardList size={18} /> },
-      { label: "Avaliações Estéticas", href: "/avaliacoes", icon: <Star size={18} /> },
-      { label: "Protocolos", href: "/protocolos", icon: <BookOpen size={18} /> },
-      { label: "Fotos Clínicas", href: "/fotos", icon: <ImageIcon size={18} /> },
-      { label: "Termos & Documentos", href: "/termos", icon: <FileSignature size={18} /> },
-    ],
-  },
-  {
-    section: "Comercial",
-    items: [
-      { label: "Orçamentos", href: "/orcamentos", icon: <Receipt size={18} /> },
-      { label: "Financeiro", href: "/financeiro", icon: <Landmark size={18} /> },
-    ],
-  },
-];
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const ENDPOINTS = {
   insumos: "/api/recursos/insumos",
-  movimentacoes: "/api/recursos/movimentacoes", // GET lista | POST { insumoId, tipo, quantidade, lote?, validade?, motivo? }
+  movimentacoes: "/api/recursos/movimentacoes", 
   aparelhos: "/api/recursos/aparelhos",
   biosseguranca: "/api/recursos/biosseguranca",
   documentos: "/api/recursos/documentos",
   compras: "/api/recursos/compras",
 } as const;
 
-/** Token de autenticação. Troque se o seu app guarda em outro lugar (cookie httpOnly já funciona via credentials). */
+/** Token de autenticação. */
 function getToken(): string | null {
   try {
     return localStorage.getItem("token") ?? localStorage.getItem("accessToken");
@@ -239,7 +170,6 @@ async function api<T = unknown>(
   const token = getToken();
   const baseUrl = API_URL.replace(/\/+$/, "");
 
-  // Garante que o prefixo /api apareça exatamente uma vez.
   const baseWithoutApi = baseUrl.replace(/\/api$/, "");
   const normalizedPath = `/${path.replace(/^\/+/, "")}`;
   const apiPath = normalizedPath === "/api" || normalizedPath.startsWith("/api/")
@@ -264,16 +194,14 @@ async function api<T = unknown>(
 
   if (!res.ok) {
     let msg = `Erro ${res.status}`;
-
     try {
       const body = await res.json();
       msg = Array.isArray(body?.message)
         ? body.message.join(", ")
         : body?.message ?? msg;
     } catch {
-      // Mantém a mensagem HTTP original quando a resposta não é JSON.
+      //
     }
-
     throw new Error(msg);
   }
 
@@ -369,7 +297,7 @@ const toneClass: Record<Tone, string> = {
 function Badge({ tone = "neutral", children }: { tone?: Tone; children: React.ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${toneClass[tone]}`}
     >
       {children}
     </span>
@@ -435,17 +363,19 @@ function Modal({
       aria-modal="true"
       aria-label={title}
     >
-      <div className={`${card} max-h-[90vh] w-full max-w-xl overflow-y-auto p-6`}>
-        <div className="mb-5 flex items-start justify-between gap-4">
+      <div className={`${card} flex max-h-[94vh] w-full max-w-xl flex-col overflow-hidden`}>
+        <div className="mb-4 sm:mb-5 flex items-start justify-between gap-4 border-b border-slate-100 px-4 sm:px-6 py-4 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{title}</h2>
-            {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-xs sm:text-sm text-slate-500">{subtitle}</p>}
           </div>
           <IconBtn label="Fechar" onClick={onClose}>
             <X size={18} />
           </IconBtn>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+           {children}
+        </div>
       </div>
     </div>
   );
@@ -463,13 +393,13 @@ function ConfirmModal({
   const [busy, setBusy] = useState(false);
   return (
     <Modal title="Confirmar exclusão" onClose={onClose}>
-      <p className="text-sm text-slate-600">{message}</p>
-      <div className="mt-6 flex justify-end gap-2">
-        <button className={btnGhost} onClick={onClose}>
+      <p className="px-6 py-5 text-sm text-slate-600">{message}</p>
+      <div className="flex flex-col sm:flex-row justify-end gap-2 border-t border-slate-100 px-4 sm:px-6 py-4">
+        <button className={`${btnGhost} w-full sm:w-auto`} onClick={onClose}>
           Cancelar
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+          className="inline-flex w-full sm:w-auto justify-center items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
           disabled={busy}
           onClick={async () => {
             setBusy(true);
@@ -545,7 +475,7 @@ function FormModal({
 
   return (
     <Modal title={title} subtitle={subtitle} onClose={onClose}>
-      <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 px-4 sm:px-6 pb-6">
         {fields.map((f) => (
           <label key={f.key} className={`block ${f.span === 2 ? "sm:col-span-2" : ""}`}>
             <span className="mb-1.5 block text-xs font-semibold text-slate-600">
@@ -591,11 +521,11 @@ function FormModal({
             {err}
           </p>
         )}
-        <div className="mt-2 flex justify-end gap-2 sm:col-span-2">
-          <button type="button" className={btnGhost} onClick={onClose}>
+        <div className="mt-2 flex flex-col sm:flex-row justify-end gap-2 sm:col-span-2">
+          <button type="button" className={`${btnGhost} w-full sm:w-auto`} onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className={btnPrimary} disabled={busy}>
+          <button type="submit" className={`${btnPrimary} w-full sm:w-auto justify-center`} disabled={busy}>
             {busy && <Loader2 size={16} className="animate-spin" />}
             {submitLabel}
           </button>
@@ -633,7 +563,7 @@ function DataTable<T extends Base>({
           <thead>
             <tr className="border-b border-slate-100 text-[11px] font-semibold tracking-wide text-slate-400">
               {columns.map((c) => (
-                <th key={c.header} className={`px-4 py-3 ${c.className ?? ""}`}>
+                <th key={c.header} className={`px-4 py-3 whitespace-nowrap ${c.className ?? ""}`}>
                   {c.header}
                 </th>
               ))}
@@ -672,7 +602,7 @@ function DataTable<T extends Base>({
             {!loading &&
               !error &&
               rows.map((r) => (
-                <tr key={r.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                <tr key={r.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition-colors">
                   {columns.map((c) => (
                     <td key={c.header} className={`px-4 py-3 align-middle ${c.className ?? ""}`}>
                       {c.render(r)}
@@ -702,20 +632,22 @@ function Toolbar({
   onExport?: () => void;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <div className="relative w-full max-w-xs">
+    <div className="mb-4 flex flex-col md:flex-row md:items-center gap-3">
+      <div className="relative w-full md:max-w-xs">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
-          className={`${inputCls} pl-9`}
+          className={`${inputCls} pl-9 w-full`}
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label={placeholder}
         />
       </div>
-      {children}
+      <div className="flex flex-nowrap items-center gap-2 overflow-x-auto scrollbar-hide pb-2 md:pb-0">
+        {children}
+      </div>
       {onExport && (
-        <button className={`${btnGhost} ml-auto`} onClick={onExport}>
+        <button className={`${btnGhost} w-full md:w-auto md:ml-auto justify-center shrink-0`} onClick={onExport}>
           <Download size={14} /> Exportar CSV
         </button>
       )}
@@ -728,7 +660,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition whitespace-nowrap shrink-0 ${
         active ? "bg-blue-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
       }`}
     >
@@ -927,8 +859,8 @@ function InsumosTab({
     });
 
   return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
-      <div className="min-w-0">
+    <div className="flex flex-col xl:flex-row gap-5">
+      <div className="flex-1 min-w-0">
         <Toolbar
           query={q}
           setQuery={setQ}
@@ -950,17 +882,15 @@ function InsumosTab({
             )
           }
         >
-          <div className="flex flex-wrap gap-2">
-            {categorias.map((c) => (
-              <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
-                {c}
-              </Chip>
-            ))}
-          </div>
-          <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600">
+          {categorias.map((c) => (
+            <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
+              {c}
+            </Chip>
+          ))}
+          <label className="sm:ml-auto flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-600 mt-2 sm:mt-0 w-full sm:w-auto shrink-0 whitespace-nowrap">
             <input
               type="checkbox"
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-slate-300 shrink-0"
               checked={soCriticos}
               onChange={(e) => setSoCriticos(e.target.checked)}
             />
@@ -973,9 +903,9 @@ function InsumosTab({
             {
               header: "Insumo",
               render: (i) => (
-                <div>
-                  <p className="font-semibold text-slate-900">{i.nome}</p>
-                  <p className="text-xs text-slate-500">
+                <div className="min-w-[150px]">
+                  <p className="font-semibold text-slate-900 truncate">{i.nome}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 truncate">
                     {[i.fabricante, i.lote && `Lote ${i.lote}`, i.categoria].filter(Boolean).join(" · ") || "—"}
                   </p>
                 </div>
@@ -987,9 +917,9 @@ function InsumosTab({
                 const pct = i.estoqueMinimo > 0 ? Math.min(100, (i.estoqueAtual / (i.estoqueMinimo * 2)) * 100) : 100;
                 const baixo = i.estoqueAtual <= i.estoqueMinimo;
                 return (
-                  <div className="w-32">
-                    <p className={`text-sm font-bold ${baixo ? "text-rose-600" : "text-slate-900"}`}>
-                      {num(i.estoqueAtual)} <span className="text-xs font-medium text-slate-500">{i.unidade}</span>
+                  <div className="w-24 sm:w-32">
+                    <p className={`text-[13px] sm:text-sm font-bold ${baixo ? "text-rose-600" : "text-slate-900"}`}>
+                      {num(i.estoqueAtual)} <span className="text-[10px] sm:text-xs font-medium text-slate-500">{i.unidade}</span>
                     </p>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
                       <div
@@ -997,18 +927,18 @@ function InsumosTab({
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400">mín. {num(i.estoqueMinimo)}</p>
+                    <p className="mt-1 text-[10px] sm:text-[11px] text-slate-400">mín. {num(i.estoqueMinimo)}</p>
                   </div>
                 );
               },
             },
             {
-              header: "Validade (1º a vencer)",
+              header: "Validade",
               render: (i) => {
                 const s = validadeStatus(i.validade);
                 return (
                   <div className="space-y-1">
-                    <p className="text-sm text-slate-700">{fmtDate(i.validade)}</p>
+                    <p className="text-[13px] sm:text-sm text-slate-700">{fmtDate(i.validade)}</p>
                     {i.validade && <Badge tone={s.tone}>{s.label}</Badge>}
                   </div>
                 );
@@ -1018,26 +948,26 @@ function InsumosTab({
               header: "Custo",
               render: (i) => (
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{brl(i.custoUnitario)}</p>
-                  <p className="text-[11px] text-slate-400">total {brl(i.custoUnitario * i.estoqueAtual)}</p>
+                  <p className="text-[13px] sm:text-sm font-semibold text-slate-900 whitespace-nowrap">{brl(i.custoUnitario)}</p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 whitespace-nowrap">total {brl(i.custoUnitario * i.estoqueAtual)}</p>
                 </div>
               ),
             },
             {
               header: "Movimentar",
               render: (i) => (
-                <div className="flex gap-1">
-                  <button className={`${btnGhost} !px-2.5 !py-1.5 text-xs`} onClick={() => movimentar(i, "ENTRADA")}>
-                    <ArrowDownToLine size={13} /> Entrada
+                <div className="flex gap-1 flex-wrap sm:flex-nowrap">
+                  <button className={`${btnGhost} w-full sm:w-auto justify-center !px-2 sm:!px-2.5 !py-1 sm:!py-1.5 text-[11px] sm:text-xs`} onClick={() => movimentar(i, "ENTRADA")}>
+                    <ArrowDownToLine size={13} /> <span className="hidden sm:inline">Entrada</span>
                   </button>
-                  <button className={`${btnGhost} !px-2.5 !py-1.5 text-xs`} onClick={() => movimentar(i, "SAIDA")}>
-                    <ArrowUpFromLine size={13} /> Baixa
+                  <button className={`${btnGhost} w-full sm:w-auto justify-center !px-2 sm:!px-2.5 !py-1 sm:!py-1.5 text-[11px] sm:text-xs`} onClick={() => movimentar(i, "SAIDA")}>
+                    <ArrowUpFromLine size={13} /> <span className="hidden sm:inline">Baixa</span>
                   </button>
                   <button
-                    className={`${btnGhost} !px-2.5 !py-1.5 text-xs hover:!text-rose-600`}
+                    className={`${btnGhost} w-full sm:w-auto justify-center !px-2 sm:!px-2.5 !py-1 sm:!py-1.5 text-[11px] sm:text-xs hover:!text-rose-600`}
                     onClick={() => movimentar(i, "DESCARTE")}
                   >
-                    <Trash2 size={13} /> Descarte
+                    <Trash2 size={13} /> <span className="hidden sm:inline">Descarte</span>
                   </button>
                 </div>
               ),
@@ -1053,7 +983,7 @@ function InsumosTab({
               : "Nenhum insumo encontrado. Limpe a busca ou os filtros."
           }
           actions={(i) => (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-1">
               <IconBtn label="Editar" onClick={() => editar(i)}>
                 <Pencil size={15} />
               </IconBtn>
@@ -1065,13 +995,13 @@ function InsumosTab({
         />
       </div>
 
-      <aside className={`${card} h-fit p-5`}>
-        <h3 className="text-base font-bold text-slate-900">Últimas movimentações</h3>
-        <p className="mt-0.5 text-xs text-slate-500">Rastreabilidade de entradas, baixas e descartes</p>
+      <aside className={`${card} h-fit p-4 sm:p-5 w-full xl:w-[320px] shrink-0`}>
+        <h3 className="text-[15px] sm:text-base font-bold text-slate-900">Últimas movimentações</h3>
+        <p className="mt-0.5 text-[11px] sm:text-xs text-slate-500">Rastreabilidade de entradas, baixas e descartes</p>
         <ul className="mt-4 space-y-3">
           {movs.loading && <li className="h-4 animate-pulse rounded bg-slate-100" />}
           {!movs.loading && movs.items.length === 0 && (
-            <li className="text-xs text-slate-500">Nenhuma movimentação ainda.</li>
+            <li className="text-[11px] sm:text-xs text-slate-500">Nenhuma movimentação ainda.</li>
           )}
           {movs.items.slice(0, 10).map((m) => {
             const nome = m.insumoNome ?? data.items.find((i) => i.id === m.insumoId)?.nome ?? "Insumo";
@@ -1079,8 +1009,8 @@ function InsumosTab({
             return (
               <li key={m.id} className="flex items-start justify-between gap-3 border-b border-slate-50 pb-3 last:border-0">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-800">{nome}</p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="truncate text-[13px] sm:text-sm font-semibold text-slate-800">{nome}</p>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400">
                     {fmtDateTime(m.createdAt)}
                     {m.lote ? ` · Lote ${m.lote}` : ""}
                   </p>
@@ -1279,7 +1209,7 @@ function CrudTab<T extends Base>({
   }, [registerCreate, stableCreate]);
 
   return (
-    <div>
+    <div className="w-full min-w-0">
       <Toolbar
         query={q}
         setQuery={setQ}
@@ -1287,7 +1217,7 @@ function CrudTab<T extends Base>({
         onExport={() => downloadCsv(csvName, rows.map(toCsv))}
       >
         {filters && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-nowrap gap-1.5 pb-2 md:pb-0 overflow-x-auto scrollbar-hide">
             {filters.map((fl, idx) => (
               <Chip key={fl.label} active={f === idx} onClick={() => setF(idx)}>
                 {fl.label}
@@ -1430,7 +1360,7 @@ const regCompras = useCallback(
     { key: "insumos", label: "Insumos e estoque", icon: <Boxes size={15} />, count: insumos.items.length },
     { key: "aparelhos", label: "Aparelhos", icon: <Cpu size={15} />, count: aparelhos.items.length },
     { key: "biosseguranca", label: "Biossegurança", icon: <ShieldCheck size={15} />, count: bio.items.length },
-    { key: "documentos", label: "Licenças e documentos", icon: <FileText size={15} />, count: docs.items.length },
+    { key: "documentos", label: "Licenças", icon: <FileText size={15} />, count: docs.items.length },
     { key: "compras", label: "Compras", icon: <ShoppingCart size={15} />, count: compras.items.length },
   ];
 
@@ -1496,26 +1426,23 @@ const regCompras = useCallback(
   const common = { toast, openForm: setForm, openConfirm: safeConfirm };
 
   return (
-    <main className="px-4 py-8 sm:px-8">
-      <div className="mx-auto max-w-[1180px]">
-        {/* Cabeçalho */}
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="flex-1 flex flex-col w-full h-full min-h-0 bg-[#f8fafc]">
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-6 flex-1 flex flex-col min-h-0">
+        {/* Cabeçalho Interno */}
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 shrink-0">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-blue-600">
-              {CLINICA_NOME} · Operação
-            </p>
-            <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">Recursos</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Estoque com rastreio de lote, aparelhos, biossegurança, licenças e compras da sua clínica.
+            <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Recursos da Clínica</h1>
+            <p className="mt-1 text-xs sm:text-sm text-slate-500">
+              Estoque com rastreio de lote, aparelhos, biossegurança, licenças e compras.
             </p>
           </div>
-          <button className={btnPrimary} onClick={() => createFns.current[tab]?.()}>
+          <button className={`${btnPrimary} w-full md:w-auto justify-center whitespace-nowrap shrink-0`} onClick={() => createFns.current[tab]?.()}>
             <Plus size={16} /> {novoLabel[tab]}
           </button>
         </header>
 
         {/* Indicadores */}
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Indicadores">
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 shrink-0" aria-label="Indicadores">
           <Kpi
             label="Valor em estoque"
             value={brl(kpi.valor)}
@@ -1526,7 +1453,7 @@ const regCompras = useCallback(
           <Kpi
             label="Itens críticos"
             value={String(kpi.criticos)}
-            hint={`Estoque baixo ou vencendo em ${ALERTA_DIAS} dias`}
+            hint={`Baixo ou vence em ${ALERTA_DIAS}d`}
             icon={<AlertTriangle size={15} />}
             tone={kpi.criticos > 0 ? "red" : "blue"}
             red={kpi.criticos > 0}
@@ -1534,14 +1461,14 @@ const regCompras = useCallback(
           <Kpi
             label="Aparelhos operacionais"
             value={`${kpi.operacionais}/${aparelhos.items.length}`}
-            hint={`${kpi.calibProx} com calibração próxima`}
+            hint={`${kpi.calibProx} calibração próxima`}
             icon={<Cpu size={15} />}
             tone="blue"
           />
           <Kpi
-            label="Conformidade sanitária"
+            label="Conformidade"
             value={`${kpi.conformidade}%`}
-            hint={`${kpi.pendentes} documento(s) exigem ação`}
+            hint={`${kpi.pendentes} pendências ativas`}
             icon={<ShieldCheck size={15} />}
             tone={kpi.pendentes > 0 ? "amber" : "green"}
           />
@@ -1549,7 +1476,7 @@ const regCompras = useCallback(
 
         {/* Abas */}
         <nav
-          className={`${card} mb-5 flex gap-1 overflow-x-auto p-1.5`}
+          className={`${card} flex gap-1 overflow-x-auto scrollbar-hide p-1.5 w-full shrink-0`}
           role="tablist"
           aria-label="Seções de recursos"
         >
@@ -1559,377 +1486,379 @@ const regCompras = useCallback(
               role="tab"
               aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                tab === t.key ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-[13px] font-bold transition whitespace-nowrap ${
+                tab === t.key ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
               {t.icon}
               {t.label}
-              <span className="rounded-full border border-slate-200 bg-white px-1.5 text-[10px] font-bold text-slate-500">
+              <span className={`rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-black ${tab === t.key ? "bg-blue-700/50 text-white" : "bg-slate-100 text-slate-500 border border-slate-200"}`}>
                 {t.count}
               </span>
             </button>
           ))}
         </nav>
 
-        {/* Conteúdo */}
-        {tab === "insumos" && (
-          <InsumosTab
-            data={insumos}
-            movs={movs}
-            reloadMovs={() => {}}
-            registerCreate={regInsumos}
-            {...common}
-          />
-        )}
+        {/* Conteúdo Dinâmico */}
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col w-full">
+          {tab === "insumos" && (
+            <InsumosTab
+              data={insumos}
+              movs={movs}
+              reloadMovs={() => {}}
+              registerCreate={regInsumos}
+              {...common}
+            />
+          )}
 
-        {tab === "aparelhos" && (
-          <CrudTab<Aparelho>
-            data={aparelhos}
-            singular="aparelho"
-            fields={aparelhoFields}
-            registerCreate={regAparelhos}
-            emptyText="Nenhum aparelho cadastrado. Use “Novo aparelho” para começar."
-            csvName="aparelhos.csv"
-            searchOf={(a) => [a.nome, a.fabricante, a.modelo, a.numeroSerie, a.sala]}
-            filters={[
-              { label: "Todos", test: () => true },
-              { label: "Operacionais", test: (a) => a.status === "OPERACIONAL" },
-              { label: "Em manutenção", test: (a) => a.status === "MANUTENCAO" },
-              {
-                label: "Calibração próxima",
-                test: (a) => {
-                  const d = daysUntil(a.proximaCalibracao);
-                  return d !== null && d <= ALERTA_DIAS;
+          {tab === "aparelhos" && (
+            <CrudTab<Aparelho>
+              data={aparelhos}
+              singular="aparelho"
+              fields={aparelhoFields}
+              registerCreate={regAparelhos}
+              emptyText="Nenhum aparelho cadastrado. Use “Novo aparelho” para começar."
+              csvName="aparelhos.csv"
+              searchOf={(a) => [a.nome, a.fabricante, a.modelo, a.numeroSerie, a.sala]}
+              filters={[
+                { label: "Todos", test: () => true },
+                { label: "Operacionais", test: (a) => a.status === "OPERACIONAL" },
+                { label: "Em manutenção", test: (a) => a.status === "MANUTENCAO" },
+                {
+                  label: "Calibração próxima",
+                  test: (a) => {
+                    const d = daysUntil(a.proximaCalibracao);
+                    return d !== null && d <= ALERTA_DIAS;
+                  },
                 },
-              },
-            ]}
-            toRow={(a) => ({
-              nome: a.nome,
-              fabricante: a.fabricante ?? "",
-              modelo: a.modelo ?? "",
-              numeroSerie: a.numeroSerie ?? "",
-              sala: a.sala ?? "",
-              status: a.status,
-              ultimaManutencao: toDateInput(a.ultimaManutencao),
-              proximaCalibracao: toDateInput(a.proximaCalibracao),
-              observacao: a.observacao ?? "",
-            })}
-            toCsv={(a) => ({
-              Aparelho: a.nome,
-              Fabricante: a.fabricante,
-              Modelo: a.modelo,
-              Serie: a.numeroSerie,
-              Sala: a.sala,
-              Status: a.status,
-              ProximaCalibracao: fmtDate(a.proximaCalibracao),
-            })}
-            columns={[
-              {
-                header: "Aparelho",
-                render: (a) => (
-                  <div>
-                    <p className="font-semibold text-slate-900">{a.nome}</p>
-                    <p className="text-xs text-slate-500">
-                      {[a.fabricante, a.modelo, a.numeroSerie && `S/N ${a.numeroSerie}`].filter(Boolean).join(" · ") ||
-                        "—"}
-                    </p>
-                  </div>
-                ),
-              },
-              { header: "Sala", render: (a) => <span className="text-slate-700">{a.sala || "—"}</span> },
-              {
-                header: "Status",
-                render: (a) => (
-                  <Badge tone={a.status === "OPERACIONAL" ? "success" : a.status === "MANUTENCAO" ? "warning" : "neutral"}>
-                    {aparelhoStatus.find((s) => s.value === a.status)?.label}
-                  </Badge>
-                ),
-              },
-              { header: "Últ. manutenção", render: (a) => fmtDate(a.ultimaManutencao) },
-              {
-                header: "Próx. calibração",
-                render: (a) => {
-                  const s = validadeStatus(a.proximaCalibracao);
-                  return (
-                    <div className="space-y-1">
-                      <p>{fmtDate(a.proximaCalibracao)}</p>
-                      {a.proximaCalibracao && <Badge tone={s.tone}>{s.label}</Badge>}
+              ]}
+              toRow={(a) => ({
+                nome: a.nome,
+                fabricante: a.fabricante ?? "",
+                modelo: a.modelo ?? "",
+                numeroSerie: a.numeroSerie ?? "",
+                sala: a.sala ?? "",
+                status: a.status,
+                ultimaManutencao: toDateInput(a.ultimaManutencao),
+                proximaCalibracao: toDateInput(a.proximaCalibracao),
+                observacao: a.observacao ?? "",
+              })}
+              toCsv={(a) => ({
+                Aparelho: a.nome,
+                Fabricante: a.fabricante,
+                Modelo: a.modelo,
+                Serie: a.numeroSerie,
+                Sala: a.sala,
+                Status: a.status,
+                ProximaCalibracao: fmtDate(a.proximaCalibracao),
+              })}
+              columns={[
+                {
+                  header: "Aparelho",
+                  render: (a) => (
+                    <div>
+                      <p className="font-semibold text-slate-900 truncate">{a.nome}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+                        {[a.fabricante, a.modelo, a.numeroSerie && `S/N ${a.numeroSerie}`].filter(Boolean).join(" · ") ||
+                          "—"}
+                      </p>
                     </div>
-                  );
+                  ),
                 },
-              },
-            ]}
-            extraActions={(a) =>
-              a.status !== "OPERACIONAL" ? (
+                { header: "Sala", render: (a) => <span className="text-slate-700 whitespace-nowrap">{a.sala || "—"}</span> },
+                {
+                  header: "Status",
+                  render: (a) => (
+                    <Badge tone={a.status === "OPERACIONAL" ? "success" : a.status === "MANUTENCAO" ? "warning" : "neutral"}>
+                      {aparelhoStatus.find((s) => s.value === a.status)?.label}
+                    </Badge>
+                  ),
+                },
+                { header: "Últ. manutenção", render: (a) => <span className="whitespace-nowrap">{fmtDate(a.ultimaManutencao)}</span> },
+                {
+                  header: "Próx. calibração",
+                  render: (a) => {
+                    const s = validadeStatus(a.proximaCalibracao);
+                    return (
+                      <div className="space-y-1 whitespace-nowrap">
+                        <p>{fmtDate(a.proximaCalibracao)}</p>
+                        {a.proximaCalibracao && <Badge tone={s.tone}>{s.label}</Badge>}
+                      </div>
+                    );
+                  },
+                },
+              ]}
+              extraActions={(a) =>
+                a.status !== "OPERACIONAL" ? (
+                  <button
+                    className={`${btnGhost} !px-2.5 !py-1.5 text-[11px] sm:text-xs whitespace-nowrap`}
+                    onClick={async () => {
+                      try {
+                        await aparelhos.update(a.id, { status: "OPERACIONAL" });
+                        toast("Aparelho voltou a operar");
+                      } catch (e) {
+                        toast(e instanceof Error ? e.message : "Falha ao atualizar", "err");
+                      }
+                    }}
+                  >
+                    <Check size={13} /> Liberar
+                  </button>
+                ) : null
+              }
+              {...common}
+            />
+          )}
+
+          {tab === "biosseguranca" && (
+            <CrudTab<Biosseguranca>
+              data={bio}
+              singular="registro de biossegurança"
+              fields={bioFields}
+              registerCreate={regBio}
+              emptyText="Nenhum registro de biossegurança. Cadastre rotinas como esterilização e limpeza terminal."
+              csvName="biosseguranca.csv"
+              searchOf={(b) => [b.titulo, b.tipo, b.responsavel, b.lote]}
+              filters={[
+                { label: "Todos", test: () => true },
+                {
+                  label: "Atrasados",
+                  test: (b) => {
+                    const d = daysUntil(b.proximaExecucao);
+                    return d !== null && d < 0;
+                  },
+                },
+                {
+                  label: "Próximos 7 dias",
+                  test: (b) => {
+                    const d = daysUntil(b.proximaExecucao);
+                    return d !== null && d >= 0 && d <= 7;
+                  },
+                },
+              ]}
+              toRow={(b) => ({
+                titulo: b.titulo,
+                tipo: b.tipo,
+                responsavel: b.responsavel ?? "",
+                lote: b.lote ?? "",
+                ultimaExecucao: toDateInput(b.ultimaExecucao),
+                proximaExecucao: toDateInput(b.proximaExecucao),
+                observacao: b.observacao ?? "",
+              })}
+              toCsv={(b) => ({
+                Rotina: b.titulo,
+                Tipo: b.tipo,
+                Responsavel: b.responsavel,
+                Lote: b.lote,
+                Ultima: fmtDate(b.ultimaExecucao),
+                Proxima: fmtDate(b.proximaExecucao),
+              })}
+              columns={[
+                {
+                  header: "Rotina",
+                  render: (b) => (
+                    <div>
+                      <p className="font-semibold text-slate-900 truncate">{b.titulo}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-500 truncate">{b.tipo}</p>
+                    </div>
+                  ),
+                },
+                { header: "Responsável", render: (b) => <span className="whitespace-nowrap">{b.responsavel || "—"}</span> },
+                { header: "Lote / ciclo", render: (b) => <span className="whitespace-nowrap">{b.lote || "—"}</span> },
+                { header: "Última execução", render: (b) => <span className="whitespace-nowrap">{fmtDate(b.ultimaExecucao)}</span> },
+                {
+                  header: "Próxima execução",
+                  render: (b) => {
+                    const s = prazoStatus(b.proximaExecucao);
+                    return (
+                      <div className="space-y-1 whitespace-nowrap">
+                        <p>{fmtDate(b.proximaExecucao)}</p>
+                        {b.proximaExecucao && <Badge tone={s.tone}>{s.label}</Badge>}
+                      </div>
+                    );
+                  },
+                },
+              ]}
+              extraActions={(b) => (
                 <button
-                  className={`${btnGhost} !px-2.5 !py-1.5 text-xs`}
+                  className={`${btnGhost} !px-2.5 !py-1.5 text-[11px] sm:text-xs whitespace-nowrap`}
                   onClick={async () => {
                     try {
-                      await aparelhos.update(a.id, { status: "OPERACIONAL" });
-                      toast("Aparelho voltou a operar");
+                      const hoje = new Date().toISOString().slice(0, 10);
+                      await bio.update(b.id, { ultimaExecucao: hoje });
+                      toast("Execução registrada hoje");
                     } catch (e) {
-                      toast(e instanceof Error ? e.message : "Falha ao atualizar", "err");
+                      toast(e instanceof Error ? e.message : "Falha ao registrar", "err");
                     }
                   }}
                 >
-                  <Check size={13} /> Liberar
+                  <Check size={13} /> Executado
                 </button>
-              ) : null
-            }
-            {...common}
-          />
-        )}
+              )}
+              {...common}
+            />
+          )}
 
-        {tab === "biosseguranca" && (
-          <CrudTab<Biosseguranca>
-            data={bio}
-            singular="registro de biossegurança"
-            fields={bioFields}
-            registerCreate={regBio}
-            emptyText="Nenhum registro de biossegurança. Cadastre rotinas como esterilização e limpeza terminal."
-            csvName="biosseguranca.csv"
-            searchOf={(b) => [b.titulo, b.tipo, b.responsavel, b.lote]}
-            filters={[
-              { label: "Todos", test: () => true },
-              {
-                label: "Atrasados",
-                test: (b) => {
-                  const d = daysUntil(b.proximaExecucao);
-                  return d !== null && d < 0;
+          {tab === "documentos" && (
+            <CrudTab<Documento>
+              data={docs}
+              singular="documento"
+              fields={docFields}
+              registerCreate={regDocs}
+              emptyText="Nenhum documento cadastrado. Registre alvarás, licenças e certificados para acompanhar os prazos."
+              csvName="documentos.csv"
+              searchOf={(d) => [d.nome, d.tipo, d.numero, d.orgaoEmissor]}
+              filters={[
+                { label: "Todos", test: () => true },
+                { label: "Vencidos", test: (d) => (daysUntil(d.validade) ?? 1) < 0 },
+                {
+                  label: `Vencem em ${ALERTA_DIAS} dias`,
+                  test: (d) => {
+                    const x = daysUntil(d.validade);
+                    return x !== null && x >= 0 && x <= ALERTA_DIAS;
+                  },
                 },
-              },
-              {
-                label: "Próximos 7 dias",
-                test: (b) => {
-                  const d = daysUntil(b.proximaExecucao);
-                  return d !== null && d >= 0 && d <= 7;
-                },
-              },
-            ]}
-            toRow={(b) => ({
-              titulo: b.titulo,
-              tipo: b.tipo,
-              responsavel: b.responsavel ?? "",
-              lote: b.lote ?? "",
-              ultimaExecucao: toDateInput(b.ultimaExecucao),
-              proximaExecucao: toDateInput(b.proximaExecucao),
-              observacao: b.observacao ?? "",
-            })}
-            toCsv={(b) => ({
-              Rotina: b.titulo,
-              Tipo: b.tipo,
-              Responsavel: b.responsavel,
-              Lote: b.lote,
-              Ultima: fmtDate(b.ultimaExecucao),
-              Proxima: fmtDate(b.proximaExecucao),
-            })}
-            columns={[
-              {
-                header: "Rotina",
-                render: (b) => (
-                  <div>
-                    <p className="font-semibold text-slate-900">{b.titulo}</p>
-                    <p className="text-xs text-slate-500">{b.tipo}</p>
-                  </div>
-                ),
-              },
-              { header: "Responsável", render: (b) => b.responsavel || "—" },
-              { header: "Lote / ciclo", render: (b) => b.lote || "—" },
-              { header: "Última execução", render: (b) => fmtDate(b.ultimaExecucao) },
-              {
-                header: "Próxima execução",
-                render: (b) => {
-                  const s = prazoStatus(b.proximaExecucao);
-                  return (
-                    <div className="space-y-1">
-                      <p>{fmtDate(b.proximaExecucao)}</p>
-                      {b.proximaExecucao && <Badge tone={s.tone}>{s.label}</Badge>}
+              ]}
+              toRow={(d) => ({
+                nome: d.nome,
+                tipo: d.tipo,
+                numero: d.numero ?? "",
+                orgaoEmissor: d.orgaoEmissor ?? "",
+                emissao: toDateInput(d.emissao),
+                validade: toDateInput(d.validade),
+                observacao: d.observacao ?? "",
+              })}
+              toCsv={(d) => ({
+                Documento: d.nome,
+                Tipo: d.tipo,
+                Numero: d.numero,
+                Orgao: d.orgaoEmissor,
+                Emissao: fmtDate(d.emissao),
+                Validade: fmtDate(d.validade),
+              })}
+              columns={[
+                {
+                  header: "Documento",
+                  render: (d) => (
+                    <div>
+                      <p className="font-semibold text-slate-900 truncate">{d.nome}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-500 truncate">{d.tipo}</p>
                     </div>
-                  );
+                  ),
                 },
-              },
-            ]}
-            extraActions={(b) => (
-              <button
-                className={`${btnGhost} !px-2.5 !py-1.5 text-xs`}
-                onClick={async () => {
-                  try {
-                    const hoje = new Date().toISOString().slice(0, 10);
-                    await bio.update(b.id, { ultimaExecucao: hoje });
-                    toast("Execução registrada hoje");
-                  } catch (e) {
-                    toast(e instanceof Error ? e.message : "Falha ao registrar", "err");
-                  }
-                }}
-              >
-                <Check size={13} /> Executado
-              </button>
-            )}
-            {...common}
-          />
-        )}
+                { header: "Número", render: (d) => <span className="whitespace-nowrap">{d.numero || "—"}</span> },
+                { header: "Órgão emissor", render: (d) => <span className="whitespace-nowrap">{d.orgaoEmissor || "—"}</span> },
+                { header: "Emissão", render: (d) => <span className="whitespace-nowrap">{fmtDate(d.emissao)}</span> },
+                {
+                  header: "Validade",
+                  render: (d) => {
+                    const s = validadeStatus(d.validade);
+                    return (
+                      <div className="space-y-1 whitespace-nowrap">
+                        <p>{fmtDate(d.validade)}</p>
+                        <Badge tone={s.tone}>{s.label}</Badge>
+                      </div>
+                    );
+                  },
+                },
+              ]}
+              {...common}
+            />
+          )}
 
-        {tab === "documentos" && (
-          <CrudTab<Documento>
-            data={docs}
-            singular="documento"
-            fields={docFields}
-            registerCreate={regDocs}
-            emptyText="Nenhum documento cadastrado. Registre alvarás, licenças e certificados para acompanhar os prazos."
-            csvName="documentos.csv"
-            searchOf={(d) => [d.nome, d.tipo, d.numero, d.orgaoEmissor]}
-            filters={[
-              { label: "Todos", test: () => true },
-              { label: "Vencidos", test: (d) => (daysUntil(d.validade) ?? 1) < 0 },
-              {
-                label: `Vencem em ${ALERTA_DIAS} dias`,
-                test: (d) => {
-                  const x = daysUntil(d.validade);
-                  return x !== null && x >= 0 && x <= ALERTA_DIAS;
-                },
-              },
-            ]}
-            toRow={(d) => ({
-              nome: d.nome,
-              tipo: d.tipo,
-              numero: d.numero ?? "",
-              orgaoEmissor: d.orgaoEmissor ?? "",
-              emissao: toDateInput(d.emissao),
-              validade: toDateInput(d.validade),
-              observacao: d.observacao ?? "",
-            })}
-            toCsv={(d) => ({
-              Documento: d.nome,
-              Tipo: d.tipo,
-              Numero: d.numero,
-              Orgao: d.orgaoEmissor,
-              Emissao: fmtDate(d.emissao),
-              Validade: fmtDate(d.validade),
-            })}
-            columns={[
-              {
-                header: "Documento",
-                render: (d) => (
-                  <div>
-                    <p className="font-semibold text-slate-900">{d.nome}</p>
-                    <p className="text-xs text-slate-500">{d.tipo}</p>
-                  </div>
-                ),
-              },
-              { header: "Número", render: (d) => d.numero || "—" },
-              { header: "Órgão emissor", render: (d) => d.orgaoEmissor || "—" },
-              { header: "Emissão", render: (d) => fmtDate(d.emissao) },
-              {
-                header: "Validade",
-                render: (d) => {
-                  const s = validadeStatus(d.validade);
-                  return (
-                    <div className="space-y-1">
-                      <p>{fmtDate(d.validade)}</p>
-                      <Badge tone={s.tone}>{s.label}</Badge>
+          {tab === "compras" && (
+            <CrudTab<Compra>
+              data={compras}
+              singular="compra"
+              fields={compraFields}
+              registerCreate={regCompras}
+              emptyText="Nenhuma compra registrada. Use “Nova compra” para criar um pedido de reposição."
+              csvName="compras.csv"
+              searchOf={(c) => [c.fornecedor, c.insumoNome, insumos.items.find((i) => i.id === c.insumoId)?.nome]}
+              filters={[
+                { label: "Todas", test: () => true },
+                { label: "Em andamento", test: (c) => c.status === "PEDIDO" || c.status === "RASCUNHO" },
+                { label: "Recebidas", test: (c) => c.status === "RECEBIDA" },
+              ]}
+              beforeSave={(p) => {
+                const ins = insumos.items.find((i) => i.id === p.insumoId);
+                return { ...p, insumoId: p.insumoId || undefined, insumoNome: ins?.nome };
+              }}
+              toRow={(c) => ({
+                fornecedor: c.fornecedor,
+                insumoId: c.insumoId ?? "",
+                quantidade: String(c.quantidade),
+                custoUnitario: String(c.custoUnitario),
+                status: c.status,
+                dataPedido: toDateInput(c.dataPedido),
+                previsaoEntrega: toDateInput(c.previsaoEntrega),
+                observacao: c.observacao ?? "",
+              })}
+              toCsv={(c) => ({
+                Fornecedor: c.fornecedor,
+                Insumo: c.insumoNome,
+                Quantidade: c.quantidade,
+                CustoUnitario: c.custoUnitario,
+                Total: c.quantidade * c.custoUnitario,
+                Status: c.status,
+                Pedido: fmtDate(c.dataPedido),
+                Previsao: fmtDate(c.previsaoEntrega),
+              })}
+              columns={[
+                {
+                  header: "Fornecedor",
+                  render: (c) => (
+                    <div>
+                      <p className="font-semibold text-slate-900 truncate">{c.fornecedor}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+                        {c.insumoNome ?? insumos.items.find((i) => i.id === c.insumoId)?.nome ?? "Sem insumo vinculado"}
+                      </p>
                     </div>
-                  );
+                  ),
                 },
-              },
-            ]}
-            {...common}
-          />
-        )}
-
-        {tab === "compras" && (
-          <CrudTab<Compra>
-            data={compras}
-            singular="compra"
-            fields={compraFields}
-            registerCreate={regCompras}
-            emptyText="Nenhuma compra registrada. Use “Nova compra” para criar um pedido de reposição."
-            csvName="compras.csv"
-            searchOf={(c) => [c.fornecedor, c.insumoNome, insumos.items.find((i) => i.id === c.insumoId)?.nome]}
-            filters={[
-              { label: "Todas", test: () => true },
-              { label: "Em andamento", test: (c) => c.status === "PEDIDO" || c.status === "RASCUNHO" },
-              { label: "Recebidas", test: (c) => c.status === "RECEBIDA" },
-            ]}
-            beforeSave={(p) => {
-              const ins = insumos.items.find((i) => i.id === p.insumoId);
-              return { ...p, insumoId: p.insumoId || undefined, insumoNome: ins?.nome };
-            }}
-            toRow={(c) => ({
-              fornecedor: c.fornecedor,
-              insumoId: c.insumoId ?? "",
-              quantidade: String(c.quantidade),
-              custoUnitario: String(c.custoUnitario),
-              status: c.status,
-              dataPedido: toDateInput(c.dataPedido),
-              previsaoEntrega: toDateInput(c.previsaoEntrega),
-              observacao: c.observacao ?? "",
-            })}
-            toCsv={(c) => ({
-              Fornecedor: c.fornecedor,
-              Insumo: c.insumoNome,
-              Quantidade: c.quantidade,
-              CustoUnitario: c.custoUnitario,
-              Total: c.quantidade * c.custoUnitario,
-              Status: c.status,
-              Pedido: fmtDate(c.dataPedido),
-              Previsao: fmtDate(c.previsaoEntrega),
-            })}
-            columns={[
-              {
-                header: "Fornecedor",
-                render: (c) => (
-                  <div>
-                    <p className="font-semibold text-slate-900">{c.fornecedor}</p>
-                    <p className="text-xs text-slate-500">
-                      {c.insumoNome ?? insumos.items.find((i) => i.id === c.insumoId)?.nome ?? "Sem insumo vinculado"}
-                    </p>
-                  </div>
-                ),
-              },
-              { header: "Qtd.", render: (c) => num(c.quantidade) },
-              {
-                header: "Total",
-                render: (c) => (
-                  <div>
-                    <p className="font-semibold text-slate-900">{brl(c.quantidade * c.custoUnitario)}</p>
-                    <p className="text-[11px] text-slate-400">{brl(c.custoUnitario)} / un</p>
-                  </div>
-                ),
-              },
-              {
-                header: "Status",
-                render: (c) => (
-                  <Badge tone={compraTone[c.status]}>{compraStatus.find((s) => s.value === c.status)?.label}</Badge>
-                ),
-              },
-              { header: "Pedido", render: (c) => fmtDate(c.dataPedido) },
-              {
-                header: "Previsão",
-                render: (c) => {
-                  const atrasada = c.status === "PEDIDO" && (daysUntil(c.previsaoEntrega) ?? 1) < 0;
-                  return (
-                    <span className={atrasada ? "font-semibold text-rose-600" : ""}>{fmtDate(c.previsaoEntrega)}</span>
-                  );
+                { header: "Qtd.", render: (c) => <span className="whitespace-nowrap">{num(c.quantidade)}</span> },
+                {
+                  header: "Total",
+                  render: (c) => (
+                    <div className="whitespace-nowrap">
+                      <p className="font-semibold text-slate-900">{brl(c.quantidade * c.custoUnitario)}</p>
+                      <p className="text-[10px] sm:text-[11px] text-slate-400">{brl(c.custoUnitario)} / un</p>
+                    </div>
+                  ),
                 },
-              },
-            ]}
-            extraActions={(c) =>
-              c.status === "PEDIDO" ? (
-                <button className={`${btnGhost} !px-2.5 !py-1.5 text-xs`} onClick={() => receberCompra(c)}>
-                  <ArrowDownToLine size={13} /> Receber
-                </button>
-              ) : null
-            }
-            {...common}
-          />
-        )}
+                {
+                  header: "Status",
+                  render: (c) => (
+                    <Badge tone={compraTone[c.status]}>{compraStatus.find((s) => s.value === c.status)?.label}</Badge>
+                  ),
+                },
+                { header: "Pedido", render: (c) => <span className="whitespace-nowrap">{fmtDate(c.dataPedido)}</span> },
+                {
+                  header: "Previsão",
+                  render: (c) => {
+                    const atrasada = c.status === "PEDIDO" && (daysUntil(c.previsaoEntrega) ?? 1) < 0;
+                    return (
+                      <span className={`whitespace-nowrap ${atrasada ? "font-semibold text-rose-600" : ""}`}>{fmtDate(c.previsaoEntrega)}</span>
+                    );
+                  },
+                },
+              ]}
+              extraActions={(c) =>
+                c.status === "PEDIDO" ? (
+                  <button className={`${btnGhost} !px-2.5 !py-1.5 text-[11px] sm:text-xs whitespace-nowrap`} onClick={() => receberCompra(c)}>
+                    <ArrowDownToLine size={13} /> Receber
+                  </button>
+                ) : null
+              }
+              {...common}
+            />
+          )}
+        </div>
       </div>
 
       {form && <FormModal {...form} onClose={() => setForm(null)} />}
       {confirm && <ConfirmModal {...confirm} onClose={() => setConfirm(null)} />}
       <Toasts list={toasts} />
-    </main>
+    </div>
   );
 }
 
@@ -1957,198 +1886,24 @@ function Kpi({
     amber: "bg-amber-50 text-amber-600",
   }[tone];
   return (
-    <div className={`${card} p-5`}>
-      <div className="flex items-start justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
-        <span className={`grid h-7 w-7 place-items-center rounded-lg ${iconTone}`}>{icon}</span>
+    <div className={`${card} p-4 sm:p-5 h-full flex flex-col justify-between min-w-0`}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500 truncate">{label}</p>
+        <span className={`grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-lg ${iconTone}`}>{icon}</span>
       </div>
-      <p className={`mt-3 text-2xl font-extrabold tracking-tight ${red ? "text-rose-600" : "text-slate-900"}`}>
+      <p className={`mt-2 sm:mt-3 text-[19px] sm:text-2xl font-extrabold tracking-tight truncate ${red ? "text-rose-600" : "text-slate-900"}`}>
         {value}
       </p>
-      <div className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500">{hint}</div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   SHELL DO SISTEMA — sidebar, topbar e rodapé do usuário
-   (se o seu layout.tsx já renderiza isso, remova AppShell e exporte só <RecursosContent />)
-   ═══════════════════════════════════════════════════════════════ */
-
-function Avatar({ size = 36 }: { size?: number }) {
-  const iniciais = USUARIO.nome
-    .replace(/^(Dra?\.|Dr\.)\s*/i, "")
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("");
-  return USUARIO.avatar ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={USUARIO.avatar}
-      alt={USUARIO.nome}
-      width={size}
-      height={size}
-      className="rounded-full object-cover"
-      style={{ width: size, height: size }}
-    />
-  ) : (
-    <span
-      className="grid shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-bold text-blue-700"
-      style={{ width: size, height: size }}
-      aria-hidden
-    >
-      {iniciais}
-    </span>
-  );
-}
-
-function AppShell({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname() ?? "";
-
-  return (
-    <div className="flex h-screen overflow-hidden bg-white text-slate-900">
-      {open && (
-        <div className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[232px] shrink-0 flex-col border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-        aria-label="Navegação principal"
-      >
-        <div className="flex items-center gap-3 px-5 pb-4 pt-5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white">
-            <Activity size={20} />
-          </span>
-          <div className="leading-tight">
-            <p className="text-lg font-extrabold tracking-tight text-slate-900">HealthSystem</p>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">Clinical Suite</p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="mx-0 flex w-full items-center justify-between border-y border-slate-100 px-5 py-3 text-left hover:bg-slate-50"
-          aria-label="Trocar unidade"
-        >
-          <span className="min-w-0">
-            <span className="block truncate text-[10px] font-semibold text-blue-600">{CLINICA_NOME}</span>
-            <span className="block truncate text-[13px] font-semibold text-slate-800">{UNIDADE_NOME}</span>
-          </span>
-          <ChevronDown size={16} className="shrink-0 text-slate-400" />
-        </button>
-
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV.map((group) => (
-            <div key={group.section} className="mb-5">
-              <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                {group.section}
-              </p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${
-                          active ? "bg-blue-50 text-blue-700" : "text-slate-700 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className={active ? "text-blue-600" : "text-slate-400"}>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar size={36} />
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-[13px] font-bold text-slate-900">{USUARIO.nome}</p>
-              <p className="truncate text-[11px] text-blue-600">{USUARIO.cargo}</p>
-            </div>
-            <IconBtn label="Configurações" onClick={() => {}}>
-              <Settings size={16} />
-            </IconBtn>
-          </div>
-          <div className="mt-3 flex items-center justify-between border-t border-dashed border-slate-200 pt-3">
-            <Badge tone="info">{USUARIO.plano}</Badge>
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800">
-              <CircleHelp size={13} /> Suporte
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* Área principal */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[62px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
-          <button
-            className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-50 lg:hidden"
-            onClick={() => setOpen(true)}
-            aria-label="Abrir menu"
-          >
-            <Menu size={20} />
-          </button>
-
-          <nav aria-label="Trilha" className="hidden items-center gap-2 text-[13px] sm:flex">
-            <span className="text-slate-500">Operação</span>
-            <span className="text-slate-300">›</span>
-            <span className="font-bold text-slate-900">Recursos</span>
-          </nav>
-
-          <div className="relative hidden w-full max-w-[300px] md:block">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              placeholder="Buscar em recursos…"
-              aria-label="Busca global"
-            />
-          </div>
-
-          <span className="hidden items-center gap-1.5 text-[13px] font-semibold text-blue-600 lg:flex">
-            <MapPin size={15} /> {UNIDADE_NOME}
-          </span>
-
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-              aria-label="Notificações"
-            >
-              <Bell size={17} />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-            </button>
-            <button
-              className="grid h-10 w-10 place-items-center rounded-full text-slate-500 hover:bg-slate-50"
-              aria-label="Ajuda"
-            >
-              <CircleHelp size={18} />
-            </button>
-            <Avatar size={36} />
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto">{children}</div>
-      </div>
+      <div className="mt-2 sm:mt-3 border-t border-slate-100 pt-2 sm:pt-3 text-[9px] sm:text-[10px] text-slate-500 truncate">{hint}</div>
     </div>
   );
 }
 
 export default function RecursosPage() {
   return (
-    <AppShell>
+    <AppShell 
+      trilha={["Operação", "Recursos"]}
+    >
       <RecursosContent />
     </AppShell>
   );

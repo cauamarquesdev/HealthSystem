@@ -3,51 +3,28 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
   Calendar,
-  Users,
-  Kanban,
   Activity,
   Stethoscope,
-  DoorOpen,
-  ArrowRight,
-  ListTodo,
-  FileText,
-  Star,
-  BookOpen,
-  Image as ImageIcon,
-  FileSignature,
-  Search,
-  MapPin,
-  Plus,
-  Bell,
-  ChevronDown,
-  ChevronRight,
-  UserCircle,
-  HelpCircle,
-  Briefcase,
-  Settings,
-  ChevronLeft,
   Lock,
   Zap,
-  MoreHorizontal,
   Clock,
-  CheckCircle2,
-  Syringe,
-  Camera,
   MessageCircle,
   X,
-  CreditCard,
-  Building2,
-  ShieldCheck,
-  Check,
   Loader2,
   AlertTriangle,
   Pencil,
   Trash2,
+  FileText,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import NewAppointmentModal from "./NewAppointmentModal";
+import { AppShell, useSessao, Avatar } from "./AppShell"; // Ajuste o caminho se necessário
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
@@ -95,7 +72,6 @@ const fromISO = (s: string) => {
 };
 const todayISO = () => toISO(new Date());
 
-// Converte valores monetários em formato brasileiro ou numérico para centavos/unidade corretamente.
 const parseCurrencyValue = (input: unknown): number => {
   if (typeof input === "number") return Number.isFinite(input) ? input : 0;
   if (typeof input !== "string" || !input.trim()) return 0;
@@ -135,7 +111,6 @@ const calculateDurationPixels = (start: string, end: string) => {
   return Math.max(28, (toMin(end) - toMin(start)) * PPM);
 };
 
-// Distribui eventos sobrepostos em "faixas" lado a lado
 function layoutEvents(list: EventData[]) {
   const sorted = [...list].sort(
     (a, b) => toMin(a.timeStart) - toMin(b.timeStart) || toMin(b.timeEnd) - toMin(a.timeEnd)
@@ -171,7 +146,6 @@ function layoutEvents(list: EventData[]) {
   return result;
 }
 
-// ================= PRESETS DOS MODAIS =================
 const BLOCK_PRESETS: { label: string; start?: string; end?: string; allDay?: boolean }[] = [
   { label: "Almoço", start: "12:00", end: "13:00" },
   { label: "Reunião" },
@@ -185,6 +159,8 @@ const inputCls =
 const labelCls = "text-[11px] font-bold text-slate-500 uppercase tracking-widest";
 
 export default function AgendaPage() {
+  const { usuario } = useSessao();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBlockTimeOpen, setIsBlockTimeOpen] = useState(false);
   const [isQuickFitOpen, setIsQuickFitOpen] = useState(false);
@@ -222,18 +198,18 @@ export default function AgendaPage() {
   const fetchAppointments = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_URL}/appointments`);
+      const res = await fetch(`${API_URL}/api/appointments`);
       if (!res.ok) throw new Error("Erro ao buscar agenda");
       const data = await res.json();
-      setEvents(data.map((a: any) => ({ ...a, col: 0, date: a.date ?? todayISO() }))); // Força col 0 (Dra Joana)
+      setEvents(data.map((a: any) => ({ ...a, col: 0, date: a.date ?? todayISO() }))); // Força col 0
     } catch (error) {
       console.error("API offline, carregando mock");
       const d = todayISO();
       setEvents([
-        { id: "1", patientName: "Mariana Prado", procedure: "Full Face Harmonização", timeStart: "08:30", timeEnd: "10:00", value: "R$ 8.500", doc: "Dra. Joana", room: "Sala 01 VIP", status: "Concluído", col: 0, date: d },
-        { id: "2", patientName: "Renata Silveira", procedure: "Avaliação 3D + Retoque Botox", timeStart: "10:30", timeEnd: "11:30", value: "", doc: "Dra. Joana", room: "Sala 01 VIP", status: "Concluído", col: 0, date: d },
-        { id: "3", patientName: "Patrícia Neves", procedure: "Fios Silhouette Soft", timeStart: "09:00", timeEnd: "10:30", value: "R$ 4.200", doc: "Dra. Joana", room: "Sala 01 VIP", status: "Confirmado", col: 0, date: d },
-        { id: "4", patientName: "Luciana Diniz", procedure: "Russian Lips Preenchimento", timeStart: "11:00", timeEnd: "12:00", value: "", doc: "Dra. Joana", room: "Sala 01 VIP", status: "Em Atendimento", col: 0, date: d },
+        { id: "1", patientName: "Mariana Prado", procedure: "Full Face Harmonização", timeStart: "08:30", timeEnd: "10:00", value: "R$ 8.500", doc: usuario?.nome || "Dra. Joana", room: "Sala 01 VIP", status: "Concluído", col: 0, date: d },
+        { id: "2", patientName: "Renata Silveira", procedure: "Avaliação 3D + Retoque Botox", timeStart: "10:30", timeEnd: "11:30", value: "", doc: usuario?.nome || "Dra. Joana", room: "Sala 01 VIP", status: "Concluído", col: 0, date: d },
+        { id: "3", patientName: "Patrícia Neves", procedure: "Fios Silhouette Soft", timeStart: "09:00", timeEnd: "10:30", value: "R$ 4.200", doc: usuario?.nome || "Dra. Joana", room: "Sala 01 VIP", status: "Confirmado", col: 0, date: d },
+        { id: "4", patientName: "Luciana Diniz", procedure: "Russian Lips Preenchimento", timeStart: "11:00", timeEnd: "12:00", value: "", doc: usuario?.nome || "Dra. Joana", room: "Sala 01 VIP", status: "Em Atendimento", col: 0, date: d },
       ]);
     } finally {
       setIsLoading(false);
@@ -304,7 +280,7 @@ export default function AgendaPage() {
     }
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_URL}/appointments/${editAppointmentData.id}`, {
+      const res = await fetch(`${API_URL}/api/appointments/${editAppointmentData.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -366,19 +342,17 @@ export default function AgendaPage() {
   const goToday = () => setSelectedDate(new Date());
 
   // Criação genérica (API → fallback local)
-  // Retorna true se salvou (API ou fallback local) e false se a API recusou o pedido
   const createEvent = async (ev: EventData, okMsg: string, localMsg: string): Promise<boolean> => {
     setIsSaving(true);
     try {
       let res: Response;
       try {
-        res = await fetch(`${API_URL}/appointments`, {
+        res = await fetch(`${API_URL}/api/appointments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(ev),
         });
       } catch {
-        // API fora do ar: mantém só na tela
         setEvents((prev) => [...prev, ev]);
         toast?.success(localMsg);
         return true;
@@ -400,7 +374,6 @@ export default function AgendaPage() {
     }
   };
 
-  // Chamado pelo modal de Novo Agendamento após salvar
   const handleAppointmentsCreated = async (local: EventData[], refetch: boolean, firstDate: Date) => {
     if (refetch) await fetchAppointments();
     if (local.length) setEvents((prev) => [...prev, ...local]);
@@ -449,7 +422,7 @@ export default function AgendaPage() {
       timeStart: blockStart,
       timeEnd: blockEnd,
       value: "",
-      doc: "Dra. Joana",
+      doc: usuario?.nome || "Dra. Joana",
       room: "Sala 01 VIP",
       status: "Bloqueado",
       type: "BLOCK",
@@ -500,7 +473,7 @@ export default function AgendaPage() {
     setEvents(prev => prev.map(ev => ev.id === draggedEventId ? { ...ev, timeStart: newStart, timeEnd: newEnd } : ev));
 
     try {
-      const res = await fetch(`${API_URL}/appointments/${draggedEventId}`, {
+      const res = await fetch(`${API_URL}/api/appointments/${draggedEventId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ timeStart: newStart, timeEnd: newEnd })
       });
       if (!res.ok) {
@@ -519,315 +492,127 @@ export default function AgendaPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex h-screen w-full bg-[#f8fafc] text-slate-900 font-sans overflow-hidden">
-      {/* ==================== SIDEBAR ==================== */}
-      <aside className="w-[260px] min-w-[260px] shrink-0 bg-white border-r border-slate-200 flex flex-col z-20 h-full">
-        <div className="p-6 border-b border-slate-100 flex flex-col gap-6">
-          <div className="flex items-center gap-3 text-blue-600 font-black text-xl tracking-tight">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
-              <Activity className="w-5 h-5 text-white" />
+    <AppShell trilha={["Operação", "Agenda Pessoal"]}>
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50 h-full">
+        {/* TOP CONTROLS */}
+        <div className="px-8 pt-6 pb-4 shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm relative">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5">
+                Agenda Clínica Exclusiva
+              </h1>
+              <p className="text-[13px] font-medium text-slate-500 uppercase tracking-widest">
+                Gestão de Horários • {usuario?.nome || "Dra. Joana Oliveira"}
+              </p>
             </div>
-            <div className="flex flex-col">
-              <span className="leading-none text-slate-900">HealthSystem</span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.15em] mt-1">
-                Clinical Suite
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between cursor-pointer group">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-blue-600 mb-0.5">
-                Ellevare Estética Avançada
-              </span>
-              <span className="text-[13px] font-medium text-slate-700 group-hover:text-slate-900 transition-colors">
-                Unidade Av Saudade (Matriz)
-              </span>
-            </div>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-5 space-y-6">
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 block">
-              Visão Geral
-            </span>
-            <nav className="space-y-0.5">
-              <SidebarItem icon={LayoutDashboard} label="Dashboard" href="/dashboard" />
-              <SidebarItem icon={Bell} label="Central de Notificações" />
-            </nav>
-          </div>
-
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 block">
-              Operação
-            </span>
-            <nav className="space-y-0.5">
-              <SidebarItem icon={Calendar} label="Agenda da Dra. Joana" active />
-              <SidebarItem icon={Users} label="Clientes" href="/pacientes" />
-              <SidebarItem icon={Kanban} label="CRM Kanban" href="/crm" />
-              <SidebarItem icon={Stethoscope} label="Procedimentos" href="/procedimentos" />
-              <SidebarItem icon={DoorOpen} label="Recursos" />
-              
-            </nav>
-          </div>
-
-          <div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2 block">
-              Gestão Clínica
-            </span>
-            <nav className="space-y-0.5">
-              <SidebarItem icon={FileText} label="Prontuários" href="/prontuarios" />
-              <SidebarItem icon={Star} label="Avaliações Estéticas" href="/avaliacoes" />
-              <SidebarItem icon={BookOpen} label="Protocolos" href="/protocolos" />
-              <SidebarItem icon={ImageIcon} label="Fotos Clínicas" href="/fotos" />
-              <SidebarItem icon={FileSignature} label="Termos & Documentos" href="/termos" />
-            </nav>
-          </div>
-        </div>
-
-        <div className="p-5 border-t border-slate-100 space-y-4 shrink-0 bg-white">
-          <div className="flex items-center gap-3">
-            <img
-              src="https://i.pravatar.cc/150?img=5"
-              alt="User"
-              className="w-10 h-10 rounded-full border border-slate-200 shrink-0 object-cover"
-            />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[13px] font-bold text-slate-800 leading-tight truncate">
-                Dra. Joana Oliveira
-              </span>
-              <span className="text-[11px] font-medium text-slate-500 truncate mt-0.5">
-                Diretora Médica & Sócia
-              </span>
-            </div>
-            <Settings className="w-4 h-4 text-slate-400 ml-auto shrink-0 cursor-pointer hover:text-slate-600" />
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-slate-100/60">
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-              Plano Enterprise
-            </span>
-            <button className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5 hover:text-slate-700">
-              <HelpCircle className="w-3.5 h-3.5" /> Suporte
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      {/* ==================== MAIN CONTENT ==================== */}
-      <main className="flex-1 flex flex-col min-w-0 h-full bg-[#f8fafc]">
-        {/* HEADER GLOBAL */}
-        <header className="h-[72px] shrink-0 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20">
-          <div className="flex items-center gap-6 flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-slate-500 shrink-0">
-              <span>Operação</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-slate-900 font-bold">
-                Agenda Pessoal
-              </span>
-            </div>
-            <div className="h-6 w-px bg-slate-200 shrink-0"></div>
-            <div className="relative w-[340px] shrink-0">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar na agenda..."
-                className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-blue-600 ml-2 shrink-0">
-              <MapPin className="w-4 h-4" /> Unidade Av Saudade
-              (Matriz)
+            <div className="flex gap-2 shrink-0">
+              <button onClick={openBlockModal} className="h-10 px-4 rounded-xl font-bold text-xs text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
+                <Lock className="w-4 h-4 text-slate-400" /> Bloquear Horário
+              </button>
+              <button onClick={() => setIsQuickFitOpen(true)} className="h-10 px-4 rounded-xl font-bold text-xs text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-2 shadow-sm">
+                <Zap className="w-4 h-4 text-amber-500" /> Encaixe Rápido
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="h-10 px-6 rounded-xl font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm ml-1"
+              >
+                <Plus className="w-4 h-4" /> Novo Agendamento
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 ml-4">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center relative cursor-pointer hover:bg-slate-100 transition-colors border border-slate-200 bg-white shadow-sm">
-              <Bell className="w-4 h-4 text-slate-600" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
-            </div>
-            <HelpCircle className="w-5 h-5 text-slate-400 cursor-pointer hover:text-slate-600 ml-1" />
-            <img
-              src="https://i.pravatar.cc/150?img=5"
-              alt="Avatar"
-              className="w-10 h-10 rounded-full border border-slate-200 ml-2 cursor-pointer object-cover shadow-sm"
-            />
-          </div>
-        </header>
-
-        {/* WORKSPACE AREA */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* TOP CONTROLS */}
-          <div className="px-8 pt-6 pb-4 shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm relative">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h1 className="text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5">
-                  Agenda Clínica Exclusiva
-                </h1>
-                <p className="text-[13px] font-medium text-slate-500 uppercase tracking-widest">
-                  Gestão de Horários • Dra. Joana Oliveira
-                </p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button onClick={openBlockModal} className="h-10 px-4 rounded-xl font-bold text-xs text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
-                  <Lock className="w-4 h-4 text-slate-400" /> Bloquear Horário
-                </button>
-                <button onClick={() => setIsQuickFitOpen(true)} className="h-10 px-4 rounded-xl font-bold text-xs text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-2 shadow-sm">
-                  <Zap className="w-4 h-4 text-amber-500" /> Encaixe Rápido
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-inner">
+                <button
+                  onClick={goToday}
+                  className={`px-4 py-1.5 text-[13px] font-bold rounded-lg transition-colors ${isToday ? "text-slate-900 bg-white shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
+                >
+                  Hoje
                 </button>
                 <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="h-10 px-6 rounded-xl font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm ml-1"
+                  onClick={() => shiftDay(-1)}
+                  aria-label="Dia anterior"
+                  className="px-3 py-1.5 text-slate-400 hover:text-slate-700 transition-colors"
                 >
-                  <Plus className="w-4 h-4" /> Novo Agendamento
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
+                <button
+                  onClick={() => shiftDay(1)}
+                  aria-label="Próximo dia"
+                  className="px-3 py-1.5 text-slate-400 hover:text-slate-700 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => dateInputRef.current?.showPicker?.()}
+                  aria-label="Escolher data"
+                  className="text-slate-400 hover:text-blue-600 transition-colors relative"
+                >
+                  <Calendar className="w-5 h-5" />
+                  <input
+                    ref={dateInputRef}
+                    type="date"
+                    value={selectedISO}
+                    onChange={(e) => e.target.value && setSelectedDate(fromISO(e.target.value))}
+                    className="absolute left-0 top-full w-0 h-0 opacity-0 pointer-events-none"
+                    tabIndex={-1}
+                  />
+                </button>
+                <h2 className="text-[19px] font-black text-slate-900" suppressHydrationWarning>
+                  {formatLongDate(selectedDate)}
+                </h2>
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded ml-2" suppressHydrationWarning>
+                  {dayAppointments.length} Atendimentos{isToday ? " Hoje" : ""}
+                </span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-inner">
-                  <button
-                    onClick={goToday}
-                    className={`px-4 py-1.5 text-[13px] font-bold rounded-lg transition-colors ${isToday ? "text-slate-900 bg-white shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
-                  >
-                    Hoje
-                  </button>
-                  <button
-                    onClick={() => shiftDay(-1)}
-                    aria-label="Dia anterior"
-                    className="px-3 py-1.5 text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => shiftDay(1)}
-                    aria-label="Próximo dia"
-                    className="px-3 py-1.5 text-slate-400 hover:text-slate-700 transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={() => dateInputRef.current?.showPicker?.()}
-                    aria-label="Escolher data"
-                    className="text-slate-400 hover:text-blue-600 transition-colors relative"
-                  >
-                    <Calendar className="w-5 h-5" />
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      value={selectedISO}
-                      onChange={(e) => e.target.value && setSelectedDate(fromISO(e.target.value))}
-                      className="absolute left-0 top-full w-0 h-0 opacity-0 pointer-events-none"
-                      tabIndex={-1}
-                    />
-                  </button>
-                  <h2 className="text-[19px] font-black text-slate-900" suppressHydrationWarning>
-                    {formatLongDate(selectedDate)}
-                  </h2>
-                  <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded ml-2" suppressHydrationWarning>
-                    {dayAppointments.length} Atendimentos{isToday ? " Hoje" : ""}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1.5 shrink-0">
-                <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
-                  Diária
-                </button>
-                <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg bg-white text-blue-600 shadow-sm flex items-center gap-2">
-                  Dra. Joana <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                </button>
-                <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
-                  Por Sala
-                </button>
-                <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
-                  Lista
-                </button>
-              </div>
+            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1.5 shrink-0">
+              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+                Diária
+              </button>
+              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg bg-white text-blue-600 shadow-sm flex items-center gap-2">
+                {usuario?.nome?.split(' ')[0] || "Dra. Joana"} <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+              </button>
+              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+                Por Sala
+              </button>
+              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+                Lista
+              </button>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex ml-auto gap-3 shrink-0">
-                <FilterPill
-                  label={`Confirmados (${dayEvents.filter(e => e.status === "Confirmado").length})`}
-                  active={activeFilters.includes("Confirmado")}
-                  onClick={() => toggleFilter("Confirmado")}
-                  color="text-slate-700 bg-slate-100 border-slate-200"
-                />
-                <FilterPill
-                  label={`Em Atendimento (${dayEvents.filter(e => e.status === "Em Atendimento").length})`}
-                  active={activeFilters.includes("Em Atendimento")}
-                  onClick={() => toggleFilter("Em Atendimento")}
-                  color={activeFilters.includes("Em Atendimento") ? "text-emerald-700 bg-emerald-100 border-emerald-200" : "text-slate-500 bg-white border-slate-200"}
-                  dot="bg-emerald-500"
-                />
-                <FilterPill
-                  label={`Aguardando (${dayEvents.filter(e => e.status === "Aguardando").length})`}
-                  active={activeFilters.includes("Aguardando")}
-                  onClick={() => toggleFilter("Aguardando")}
-                  color={activeFilters.includes("Aguardando") ? "text-amber-700 bg-amber-50 border-amber-200" : "text-slate-500 bg-white border-slate-200"}
-                  dot="bg-amber-500"
-                />
-                <FilterPill
-                  label={`Concluídos (${dayEvents.filter(e => e.status === "Concluído").length})`}
-                  active={activeFilters.includes("Concluído")}
-                  onClick={() => toggleFilter("Concluído")}
-                  color="text-slate-500 bg-white border-slate-200"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-6 gap-4">
-              
-              <AgendaMetric
-                title="Confirmados"
-                value={dayEvents.filter(e => e.status === "Confirmado").length}
-                suffix="pacientes"
-                sub="Grade sólida"
-                icon={<Calendar className="w-4 h-4" />}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex ml-auto gap-3 shrink-0">
+              <FilterPill
+                label={`Confirmados (${dayEvents.filter(e => e.status === "Confirmado").length})`}
+                active={activeFilters.includes("Confirmado")}
+                onClick={() => toggleFilter("Confirmado")}
+                color="text-slate-700 bg-slate-100 border-slate-200"
               />
-              <AgendaMetric
-                title="Em Atendimento"
-                value={`0${dayEvents.filter(e => e.status === "Em Atendimento").length}`}
-                suffix="em curso"
-                sub="Sala 01 VIP"
-                icon={
-                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                }
-                bg="bg-emerald-50"
-                border="border-emerald-200/60"
-                valColor="text-emerald-700"
-                titleColor="text-emerald-600/80"
-                subColor="text-emerald-600/80"
+              <FilterPill
+                label={`Em Atendimento (${dayEvents.filter(e => e.status === "Em Atendimento").length})`}
+                active={activeFilters.includes("Em Atendimento")}
+                onClick={() => toggleFilter("Em Atendimento")}
+                color={activeFilters.includes("Em Atendimento") ? "text-emerald-700 bg-emerald-100 border-emerald-200" : "text-slate-500 bg-white border-slate-200"}
+                dot="bg-emerald-500"
               />
-              <AgendaMetric
-                title="Aguardando"
-                value={`0${dayEvents.filter(e => e.status === "Aguardando").length}`}
-                suffix="no lounge"
-                sub="Check-in validado"
-                icon={<Clock className="w-4 h-4" />}
+              <FilterPill
+                label={`Aguardando (${dayEvents.filter(e => e.status === "Aguardando").length})`}
+                active={activeFilters.includes("Aguardando")}
+                onClick={() => toggleFilter("Aguardando")}
+                color={activeFilters.includes("Aguardando") ? "text-amber-700 bg-amber-50 border-amber-200" : "text-slate-500 bg-white border-slate-200"}
+                dot="bg-amber-500"
               />
-              <AgendaMetric
-                title="Slots Livres"
-                value="05"
-                suffix="horários"
-                sub="Disponíveis à tarde"
-                icon={<CheckCircle2 className="w-4 h-4" />}
-              />
-              <AgendaMetric
-                title="Faturamento Previsto"
-                value={`R$ ${dayAppointments.reduce((sum, e) => sum + parseCurrencyValue(e.value), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                sub="Meta diária superada"
-                icon={<Briefcase className="w-4 h-4 text-blue-400" />}
-                bg="bg-[#0f172a]"
-                border="border-[#0f172a]"
-                valColor="text-white"
-                titleColor="text-slate-400"
-                subColor="text-slate-400"
+              <FilterPill
+                label={`Concluídos (${dayEvents.filter(e => e.status === "Concluído").length})`}
+                active={activeFilters.includes("Concluído")}
+                onClick={() => toggleFilter("Concluído")}
+                color="text-slate-500 bg-white border-slate-200"
               />
             </div>
           </div>
@@ -850,11 +635,11 @@ export default function AgendaPage() {
                   </span>
                 </div>
                 <ProfColumnHeader
-                  name="Dra. Joana Oliveira"
-                  role="SUÍTE VIP PREMIUM"
+                  name={usuario?.nome || "Dra. Joana Oliveira"}
+                  role={usuario?.cargo || "SUÍTE VIP PREMIUM"}
                   room="Sala 01 VIP"
                   pts={`${filteredAppointmentsCount} Atendimentos`}
-                  avatar="https://i.pravatar.cc/150?img=5"
+                  avatar={usuario?.avatar}
                   className="flex-1"
                 />
               </div>
@@ -1008,13 +793,13 @@ export default function AgendaPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* ==================== MODAL EDITAR AGENDAMENTO ==================== */}
       <AnimatePresence>
         {isEditAppointmentOpen && editAppointmentData && (
           <ModalShell onClose={() => setIsEditAppointmentOpen(false)} maxWidth="max-w-[520px]">
-            <form onSubmit={saveAppointmentEdit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={saveAppointmentEdit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black text-slate-900">Editar agendamento</h2>
@@ -1031,7 +816,7 @@ export default function AgendaPage() {
               </div>
               <div className="space-y-1.5"><label className={labelCls}>Valor</label><input className={inputCls} value={editAppointmentData.value} onChange={e => setEditAppointmentData({ ...editAppointmentData, value: e.target.value })} placeholder="R$ 0,00" /></div>
               <div className="space-y-1.5"><label className={labelCls}>Status</label><select className={inputCls} value={editAppointmentData.status} onChange={e => setEditAppointmentData({ ...editAppointmentData, status: e.target.value })}><option>Confirmado</option><option>Aguardando</option><option>Em Atendimento</option><option>Concluído</option></select></div>
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 mt-2">
                 <button type="button" disabled={isSaving} onClick={() => setIsEditAppointmentOpen(false)} className="h-10 px-4 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Cancelar</button>
                 <button type="submit" disabled={isSaving} className="h-10 px-5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2 disabled:opacity-60">{isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Salvar alterações</button>
               </div>
@@ -1062,7 +847,7 @@ export default function AgendaPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Bloquear horário</h2>
-                  <p className="text-[12px] font-medium text-slate-500 mt-0.5">Dra. Joana Oliveira • Sala 01 VIP</p>
+                  <p className="text-[12px] font-medium text-slate-500 mt-0.5">{usuario?.nome || "Dra. Joana Oliveira"} • Sala 01 VIP</p>
                 </div>
               </div>
               <button
@@ -1237,7 +1022,7 @@ export default function AgendaPage() {
         onCreated={handleAppointmentsCreated}
       />
 
-    </div>
+    </AppShell>
   );
 }
 
@@ -1277,20 +1062,6 @@ function ModalShell({ onClose, maxWidth = "max-w-[480px]", children }: any) {
   );
 }
 
-function SidebarItem({ icon: Icon, label, active, href }: any) {
-  return (
-    <a
-      href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-bold transition-all ${active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}`}
-    >
-      <Icon
-        className={`w-5 h-5 shrink-0 ${active ? "text-blue-600" : "text-slate-400"}`}
-      />
-      <span className="truncate">{label}</span>
-    </a>
-  );
-}
-
 function FilterPill({ label, active, color, border, dot, onClick }: any) {
   return (
     <button
@@ -1303,59 +1074,10 @@ function FilterPill({ label, active, color, border, dot, onClick }: any) {
   );
 }
 
-function AgendaMetric({
-  title,
-  value,
-  sub,
-  suffix,
-  icon,
-  bg = "bg-white",
-  border = "border-slate-200/60",
-  valColor = "text-slate-900",
-  titleColor = "text-slate-400",
-  subColor = "text-slate-400",
-}: any) {
-  return (
-    <div
-      className={`${bg} border ${border} rounded-2xl p-5 flex flex-col justify-between shadow-sm min-w-0 h-[110px]`}
-    >
-      <div className="flex justify-between items-center mb-1.5 gap-2">
-        <span
-          className={`text-[10px] font-bold uppercase tracking-widest ${titleColor} truncate`}
-        >
-          {title}
-        </span>
-        <div className={`text-slate-400 shrink-0`}>{icon}</div>
-      </div>
-      <div>
-        <div className="flex items-baseline gap-1">
-          <span
-            className={`text-2xl font-black ${valColor} leading-none truncate`}
-          >
-            {value}
-          </span>
-          {suffix && (
-            <span className={`text-[10px] font-bold ${titleColor} truncate`}>
-              {suffix}
-            </span>
-          )}
-        </div>
-        <p className={`text-[11px] font-medium mt-1.5 ${subColor} truncate`}>
-          {sub}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function ProfColumnHeader({ name, role, room, pts, avatar, className }: any) {
   return (
     <div className={`min-w-[320px] shrink-0 p-4 bg-slate-50/30 flex items-center gap-4 relative ${className}`}>
-      <img
-        src={avatar}
-        className="w-11 h-11 rounded-full border border-slate-200 object-cover shrink-0 shadow-sm"
-        alt={name}
-      />
+      <Avatar nome={name} foto={avatar} size={44} />
       <div className="flex flex-col min-w-0">
         <span className="text-[14px] font-bold text-slate-900 leading-tight truncate">
           {name}
