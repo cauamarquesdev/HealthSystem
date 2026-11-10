@@ -48,6 +48,7 @@ export default function DashboardPage() {
           crm: [],
           alerts: [],
           mixChart: [],
+          retornos: { total: 0, potencial: 0, pacientes: [] },
         });
       } finally {
         setIsLoading(false);
@@ -105,6 +106,7 @@ export default function DashboardPage() {
   const totalFluxo = fluxo.reduce((s, p) => s + p.valor, 0);
   const pico = fluxo.reduce((m: any, p) => (p.valor > (m?.valor ?? 0) ? p : m), null);
   const projecao = parseMoney(metrics?.projecao);
+  const retornos = normalizeRetornos(metrics);
 
   const hoje = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
@@ -228,7 +230,7 @@ export default function DashboardPage() {
                 </section>
 
                 <div className="space-y-6">
-                  {/* Retorno de pacientes (antigo banner) */}
+                  {/* Retornos pendentes */}
                   <section className="rounded-xl border border-stone-300 bg-white p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
@@ -236,23 +238,28 @@ export default function DashboardPage() {
                       </div>
                       <div className="min-w-0">
                         <h2 className="text-base font-semibold">Retornos pendentes</h2>
-                        <p className="mt-1 text-sm leading-relaxed text-stone-500">
-                          14 pacientes com toxina ou bioestimulador há mais de 120 dias, sem retorno marcado.
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-stone-900">Potencial de R$ 58.400,00</p>
+                        {retornos.total > 0 ? (
+                          <>
+                            <p className="mt-1 text-sm leading-relaxed text-stone-500">
+                              {retornos.total} {retornos.total === 1 ? "paciente" : "pacientes"} sem retorno marcado
+                              {retornos.diasMinimos ? ` há mais de ${retornos.diasMinimos} dias` : ""}.
+                            </p>
+                            {retornos.potencial > 0 && (
+                              <p className="mt-2 text-sm font-medium text-stone-900">Potencial de {brl(retornos.potencial)}</p>
+                            )}
+                          </>
+                        ) : (
+                          <p className="mt-1 text-sm text-stone-500">Nenhum paciente com retorno pendente no momento.</p>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
-                      <button className="h-9 flex-1 rounded-lg bg-teal-700 px-3 text-sm font-medium text-white hover:bg-teal-800">
-                        Enviar WhatsApp
-                      </button>
-                      <button
-                        onClick={() => setIsEligibleOpen(true)}
-                        className="h-9 flex-1 rounded-lg border border-stone-300 px-3 text-sm font-medium text-stone-700 hover:bg-stone-50"
-                      >
-                        Ver lista (14)
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setIsEligibleOpen(true)}
+                      disabled={retornos.total === 0}
+                      className="mt-4 h-9 w-full rounded-lg bg-teal-700 px-3 text-sm font-medium text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
+                    >
+                      Ver pacientes{retornos.total > 0 ? ` (${retornos.total})` : ""}
+                    </button>
                   </section>
 
                   {/* CRM */}
@@ -411,24 +418,38 @@ export default function DashboardPage() {
       <Modal
         open={isEligibleOpen}
         onClose={() => setIsEligibleOpen(false)}
-        title="Pacientes elegíveis"
-        subtitle="Ciclo de toxina e bioestimuladores."
-        confirm="Enviar WhatsApp"
-        footerNote="Potencial: R$ 58.400,00"
+        title="Retornos pendentes"
+        subtitle="Toque no botão para chamar o paciente no WhatsApp."
+        cancelLabel="Fechar"
+        footerNote={retornos.potencial > 0 ? `Potencial: ${brl(retornos.potencial)}` : undefined}
       >
-        <div className="custom-scrollbar max-h-[320px] space-y-2 overflow-y-auto">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border border-stone-200 p-3 hover:bg-stone-50">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-100 text-stone-500"><User className="h-4 w-4" /></div>
-                <div>
-                  <h4 className="text-sm font-medium">Paciente VIP 0{i}</h4>
-                  <span className="text-xs text-stone-500">Última visita há {120 + i * 10} dias</span>
+        <div className="custom-scrollbar max-h-[360px] space-y-2 overflow-y-auto">
+          {retornos.pacientes.map((pc, i) => {
+            const link = waLink(pc);
+            return (
+              <div key={pc.id ?? i} className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 p-3 hover:bg-stone-50">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500"><User className="h-4 w-4" /></div>
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-medium">{pc.nome}</h4>
+                    <span className="block truncate text-xs text-stone-500">
+                      {pc.dias != null ? `Última visita há ${pc.dias} dias` : "Sem data de última visita"}
+                      {pc.procedimento ? ` · ${pc.procedimento}` : ""}
+                    </span>
+                  </div>
                 </div>
+                {link ? (
+                  <a href={link} target="_blank" rel="noopener noreferrer" aria-label={`Chamar ${pc.nome} no WhatsApp`} className="shrink-0 rounded-lg bg-teal-700 p-2 text-white hover:bg-teal-800">
+                    <MessageCircle className="h-4 w-4" />
+                  </a>
+                ) : (
+                  <span title="Paciente sem telefone cadastrado" className="shrink-0 rounded-lg bg-stone-100 p-2 text-stone-300">
+                    <MessageCircle className="h-4 w-4" />
+                  </span>
+                )}
               </div>
-              <button aria-label="Enviar mensagem" className="rounded-lg bg-teal-700 p-2 text-white hover:bg-teal-800"><MessageCircle className="h-4 w-4" /></button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Modal>
     </AppShell>
@@ -462,6 +483,37 @@ function buildFluxo(metrics: any): { label: string; valor: number; projetado?: n
     byHour[h] = (byHour[h] || 0) + parseMoney(a.val);
   });
   return Object.keys(byHour).sort().map((h) => ({ label: `${h}h`, valor: byHour[h] }));
+}
+
+type Retorno = { id?: any; nome: string; dias: number | null; procedimento?: string; telefone?: string };
+
+// Usa metrics.retornos = { total, potencial, diasMinimos?, pacientes: [{ id, nome, ultimaVisita | diasSemRetorno, procedimento, telefone }] }
+function normalizeRetornos(metrics: any) {
+  const r = metrics?.retornos;
+  const raw: any[] = Array.isArray(r) ? r : r?.pacientes || [];
+  const pacientes: Retorno[] = raw.map((p) => {
+    let dias: number | null = p.diasSemRetorno ?? null;
+    if (dias == null && p.ultimaVisita) {
+      const d = new Date(p.ultimaVisita).getTime();
+      if (!isNaN(d)) dias = Math.max(0, Math.floor((Date.now() - d) / 86400000));
+    }
+    return { id: p.id, nome: p.nome ?? p.name ?? "Paciente", dias, procedimento: p.procedimento, telefone: p.telefone };
+  });
+  return {
+    pacientes,
+    total: Number(r?.total ?? pacientes.length) || 0,
+    potencial: parseMoney(r?.potencial),
+    diasMinimos: r?.diasMinimos as number | undefined,
+  };
+}
+
+function waLink(p: Retorno) {
+  const digits = String(p.telefone || "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  const numero = digits.length <= 11 ? `55${digits}` : digits;
+  const nome = p.nome.split(" ")[0];
+  const msg = `Olá, ${nome}! Já faz um tempo desde o seu último atendimento${p.procedimento ? ` de ${p.procedimento}` : ""}. Vamos agendar o seu retorno?`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
 }
 
 function RevenueChart({ data }: { data: { label: string; valor: number; projetado?: number }[] }) {
@@ -545,7 +597,7 @@ function Field({ label, children }: any) {
   );
 }
 
-function Modal({ open, onClose, title, subtitle, confirm, footerNote, wide, children }: any) {
+function Modal({ open, onClose, title, subtitle, confirm, cancelLabel = "Cancelar", footerNote, wide, children }: any) {
   return (
     <AnimatePresence>
       {open && (
@@ -570,8 +622,8 @@ function Modal({ open, onClose, title, subtitle, confirm, footerNote, wide, chil
             <div className="space-y-4 overflow-y-auto p-4 sm:p-5">{children}</div>
             <div className="flex flex-col-reverse items-stretch gap-2 border-t border-stone-200 bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-end sm:px-5">
               {footerNote && <span className="text-sm text-stone-500 sm:mr-auto">{footerNote}</span>}
-              <button onClick={onClose} className="h-9 rounded-lg px-4 text-sm font-medium text-stone-600 hover:bg-stone-200/60">Cancelar</button>
-              <button className="h-9 rounded-lg bg-teal-700 px-5 text-sm font-medium text-white hover:bg-teal-800">{confirm}</button>
+              <button onClick={onClose} className="h-9 rounded-lg px-4 text-sm font-medium text-stone-600 hover:bg-stone-200/60">{cancelLabel}</button>
+              {confirm && <button className="h-9 rounded-lg bg-teal-700 px-5 text-sm font-medium text-white hover:bg-teal-800">{confirm}</button>}
             </div>
           </motion.div>
         </div>
