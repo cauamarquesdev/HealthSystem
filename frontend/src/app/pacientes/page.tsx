@@ -95,7 +95,7 @@ export default function ClientesPage() {
   // ABRIR MODAL PARA EDIÇÃO (Preenche os campos)
   const handleEditPatient = (e: React.MouseEvent, patient: any) => {
     e.stopPropagation();
-    setEditingPatientId(patient.id);
+    setEditingPatientId(patient.id || patient._id);
     
     let formattedDate = "";
     if (patient.birthDate) {
@@ -158,7 +158,7 @@ export default function ClientesPage() {
       const savedPatient = await res.json();
       
       if (editingPatientId) {
-        setPatients(prev => prev.map(p => p.id === editingPatientId ? { ...p, ...savedPatient } : p));
+        setPatients(prev => prev.map(p => (p.id || p._id) === editingPatientId ? { ...p, ...savedPatient } : p));
       } else {
         setPatients(prev => [savedPatient, ...prev]);
         setSelectedPatientId(savedPatient.id ?? savedPatient._id ?? null);
@@ -173,43 +173,43 @@ export default function ClientesPage() {
     }
   };
 
-// Extrai os IDs do corpo do pedido
-const { ids } = req.body; // (Ou equivalente no teu framework)
+  // DELETAR PACIENTE (APENAS LÓGICA DE FRONT-END USANDO FETCH)
+  const handleDeletePatient = async (e: React.MouseEvent, idParaDeletar: string) => {
+    e.stopPropagation();
+    
+    if (!idParaDeletar) {
+      alert("Erro: ID inválido.");
+      return;
+    }
 
-if (!ids || !Array.isArray(ids) || ids.length === 0) {
-  return res.status(400).json({ message: "Nenhum ID fornecido para exclusão." });
-}
+    if (!window.confirm("Tem certeza que deseja excluir este paciente permanentemente?")) return;
 
-// Executa o Prisma usando .then() e .catch()
-prisma.patient.deleteMany({
-  where: {
-    id: {
-      in: ids,
-    },
-  },
-})
-.then((result) => {
-  // Verifica se o Prisma encontrou e apagou alguma coisa
-  if (result.count === 0) {
-    return res.status(404).json({ 
-      message: "Nenhum paciente encontrado com os IDs fornecidos." 
-    });
-  }
+    const pacientesAnteriores = [...patients];
 
-  // Sucesso
-  return res.status(200).json({ 
-    message: "Pacientes excluídos com sucesso.", 
-    apagados: result.count 
-  });
-})
-.catch((error) => {
-  console.error("Erro no Prisma:", error);
-  return res.status(500).json({ message: "Erro interno ao apagar na base de dados." });
-});
+    // 1. Atualização Otimista
+    setPatients(prev => prev.filter(p => p.id !== idParaDeletar && p._id !== idParaDeletar));
+    if (selectedPatientId === idParaDeletar) setSelectedPatientId(null);
+
+    try {
+      const res = await fetch(`${API_URL}/api/patients/batch`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [idParaDeletar] })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Erro da API (${res.status})`);
+      }
+    } catch (error) {
+      console.error("Falha ao excluir no banco de dados:", error);
+      alert("O backend falhou ao excluir. O paciente voltará para a tela.");
+      setPatients(pacientesAnteriores); // Reverte a tela
+    }
+  };
   
   // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
-    const textMatch = p.name.toLowerCase().includes(busca.toLowerCase()) || 
+    const textMatch = p.name?.toLowerCase().includes(busca.toLowerCase()) || 
                       (p.cpf && p.cpf.includes(busca)) || 
                       (p.phone && p.phone.includes(busca));
                       
@@ -253,7 +253,7 @@ prisma.patient.deleteMany({
     document.body.removeChild(link);
   };
 
-  const activePatient = patients.find((p) => p.id === selectedPatientId) || patients[0];
+  const activePatient = patients.find((p) => p.id === selectedPatientId || p._id === selectedPatientId) || patients[0];
 
   const acoesTopo = (
     <>
@@ -272,7 +272,7 @@ prisma.patient.deleteMany({
       busca={{ valor: busca, onChange: setBusca, placeholder: "Pesquisar por nome ou CPF..." }}
       acoes={acoesTopo}
     >
-      {/* Wrapper principal contendo todo o layout com margens (p-4 sm:p-6 lg:p-8) limitadas a max-w-[1600px] */}
+      {/* Wrapper principal */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
         <div className="flex-1 flex flex-col w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 gap-5 sm:gap-6 min-h-0">
           
@@ -355,13 +355,13 @@ prisma.patient.deleteMany({
                       </div>
                     ) : (
                       filteredPatients.map((p) => (
-                        <div key={p.id} onClick={() => setSelectedPatientId(p.id)} className={`grid grid-cols-[auto_2fr_1.5fr_1fr_1fr_auto] gap-4 px-5 py-4 border-b border-slate-50 items-center cursor-pointer transition-colors group ${p.id === selectedPatientId ? "bg-blue-50/30" : "hover:bg-slate-50"}`}>
+                        <div key={p.id || p._id} onClick={() => setSelectedPatientId(p.id || p._id)} className={`grid grid-cols-[auto_2fr_1.5fr_1fr_1fr_auto] gap-4 px-5 py-4 border-b border-slate-50 items-center cursor-pointer transition-colors group ${p.id === selectedPatientId || p._id === selectedPatientId ? "bg-blue-50/30" : "hover:bg-slate-50"}`}>
                           <div className="w-4">
                             <input 
                               type="checkbox" 
-                              checked={checkedPatients.includes(p.id)} 
+                              checked={checkedPatients.includes(p.id || p._id)} 
                               onChange={() => {}} 
-                              onClick={(e) => handleToggleCheck(e, p.id)} 
+                              onClick={(e) => handleToggleCheck(e, p.id || p._id)} 
                               className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer" 
                             />
                           </div>
