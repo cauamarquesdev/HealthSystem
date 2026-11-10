@@ -173,24 +173,25 @@ export default function ClientesPage() {
     }
   };
 
- // DELETAR PACIENTE
-  const handleDeletePatient = async (e: React.MouseEvent, patient: any) => {
+// DELETAR PACIENTE
+  const handleDeletePatient = async (e: React.MouseEvent, idParaDeletar: string) => {
     e.stopPropagation();
     
-    // BLINDAGEM: Garante que vai pegar o ID correto (id normal ou _id do MongoDB)
-    const idParaDeletar = patient.id || patient._id;
-
     if (!idParaDeletar) {
-      alert("Erro no Front-end: O paciente não possui um ID válido para ser excluído.");
+      alert("Erro no Front-end: ID inválido ou não encontrado.");
       return;
     }
 
-    if (!window.confirm(`Tem certeza que deseja excluir ${patient.name} permanentemente?`)) return;
+    // Busca o paciente na lista atual para pegar o nome
+    const paciente = patients.find(p => p.id === idParaDeletar || p._id === idParaDeletar);
+    const nomePaciente = paciente ? paciente.name : "este paciente";
+
+    if (!window.confirm(`Tem certeza que deseja excluir ${nomePaciente} permanentemente?`)) return;
 
     const pacientesAnteriores = [...patients];
 
-    // Atualização Otimista: Remove da tela na mesma hora
-    setPatients(prev => prev.filter(p => (p.id || p._id) !== idParaDeletar));
+    // 1. Atualização Otimista: Remove da tela imediatamente (cobre tanto id quanto _id)
+    setPatients(prev => prev.filter(p => p.id !== idParaDeletar && p._id !== idParaDeletar));
     if (selectedPatientId === idParaDeletar) setSelectedPatientId(null);
 
     try {
@@ -207,16 +208,18 @@ export default function ClientesPage() {
         throw new Error(`Erro da API (${res.status}): ${errorMsg}`);
       }
 
-      console.log("✅ Paciente excluído com sucesso do banco de dados!");
+      console.log("✅ Paciente excluído com sucesso do banco!");
 
     } catch (error) {
       console.error("❌ Falha ao excluir no banco de dados:", error);
-      alert("O backend falhou ao excluir. O paciente voltará para a tela. Abra o F12 (Console) para ver o erro exato.");
+      alert("O backend falhou ao excluir. O paciente voltará para a tela. Verifique o Console (F12).");
       
-      // Reverte a tela para mostrar que não apagou
+      // 3. Rollback: Devolve para a tela caso o backend recuse
       setPatients(pacientesAnteriores);
     }
   };
+
+  
   // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
     const textMatch = p.name.toLowerCase().includes(busca.toLowerCase()) || 
@@ -404,7 +407,7 @@ export default function ClientesPage() {
                           {/* Ações de Hover */}
                           <div className="w-16 flex items-center justify-end gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                             <button onClick={(e) => handleEditPatient(e, p)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit3 className="w-4 h-4"/></button>
-                            <button onClick={(e) => handleDeletePatient(e, p.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 className="w-4 h-4"/></button>
+                            <button onClick={(e) => handleDeletePatient(e, p.id || p._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 className="w-4 h-4"/></button>
                           </div>
                         </div>
                       ))
