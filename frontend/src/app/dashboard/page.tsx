@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Plus, Download, MoreVertical, Clock, Gift, MessageCircle,
@@ -100,14 +100,11 @@ export default function DashboardPage() {
 
   const agenda: any[] = metrics?.agenda || [];
   const mix: any[] = metrics?.mixChart || [];
-  const mixView = mix.length
-    ? mix
-    : [
-        { label: "Injetáveis e harmonização", pct: "52%", val: "R$ 25.298" },
-        { label: "Tecnologias e lasers", pct: "24%", val: "R$ 11.622" },
-        { label: "Peelings e estética", pct: "14%", val: "R$ 6.811" },
-        { label: "Home care", pct: "10%", val: "R$ 4.919" },
-      ];
+  const mixView: any[] = mix;
+  const fluxo = buildFluxo(metrics);
+  const totalFluxo = fluxo.reduce((s, p) => s + p.valor, 0);
+  const pico = fluxo.reduce((m: any, p) => (p.valor > (m?.valor ?? 0) ? p : m), null);
+  const projecao = parseMoney(metrics?.projecao);
 
   const hoje = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
@@ -284,43 +281,37 @@ export default function DashboardPage() {
                   <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <h2 className="text-base font-semibold">Faturamento por horário</h2>
-                      <p className="text-sm text-stone-500">Realizado comparado ao projetado</p>
+                      <p className="text-sm text-stone-500">Receita registrada em cada faixa do período</p>
                     </div>
-                    <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-                      <span className="flex items-center gap-2 text-stone-700">
-                        <span className="h-0.5 w-4 bg-teal-700" /> Realizado (R$ {metrics?.faturamentoHoje || "0"})
-                      </span>
-                      <span className="flex items-center gap-2 text-stone-500">
-                        <span className="h-0 w-4 border-t-2 border-dashed border-stone-400" /> Projetado (R$ 56.000)
-                      </span>
-                    </div>
+                    {fluxo.length > 0 && (
+                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+                        <span className="flex items-center gap-2 text-stone-700">
+                          <span className="h-0.5 w-4 bg-teal-700" /> Realizado ({brl(totalFluxo)})
+                        </span>
+                        {fluxo.some((p) => p.projetado != null) && (
+                          <span className="flex items-center gap-2 text-stone-500">
+                            <span className="h-0 w-4 border-t-2 border-dashed border-stone-400" /> Projetado
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="relative h-48 w-full sm:h-64">
-                    <svg viewBox="0 0 800 200" preserveAspectRatio="none" className="h-full w-full overflow-visible">
-                      <defs>
-                        <linearGradient id="fillTeal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#0f766e" stopOpacity="0.14" />
-                          <stop offset="100%" stopColor="#0f766e" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0,150 L800,150 M0,100 L800,100 M0,50 L800,50 M0,0 L800,0" stroke="#e7e5e4" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                      <path d="M0,160 Q 100,140 200,120 T 400,60 T 600,100 T 800,90" fill="none" stroke="#a8a29e" strokeWidth="2" strokeDasharray="6 6" vectorEffect="non-scaling-stroke" />
-                      <path d="M0,170 Q 100,150 200,140 T 400,10 T 550,60 T 600,130 T 700,90 T 800,100 L800,200 L0,200 Z" fill="url(#fillTeal)" />
-                      <path d="M0,170 Q 100,150 200,140 T 400,10 T 550,60 T 600,130 T 700,90 T 800,100" fill="none" stroke="#0f766e" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
-                    </svg>
-                    <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-md bg-stone-900 px-2.5 py-1 text-xs font-medium text-white">
-                      Pico: R$ 14.800
-                    </div>
-                  </div>
-                  <div className="mt-2 flex justify-between text-xs text-stone-400">
-                    <span>09:00</span><span>12:00</span><span>14:00</span><span>18:00</span><span>20:00</span>
-                  </div>
-
-                  <div className="mt-5 flex flex-col gap-1 rounded-lg bg-stone-50 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-stone-700">Melhor conversão: sessão das 14h, com 4 procedimentos full face.</span>
-                    <span className="whitespace-nowrap font-medium text-stone-900">Projeção do dia: R$ 56.400</span>
-                  </div>
+                  {totalFluxo > 0 ? (
+                    <>
+                      <RevenueChart data={fluxo} />
+                      <div className="mt-4 flex flex-col gap-1 rounded-lg bg-stone-50 px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-stone-700">
+                          Maior faturamento: {pico?.label}, com {brl(pico?.valor || 0)}.
+                        </span>
+                        {projecao > 0 && (
+                          <span className="whitespace-nowrap font-medium text-stone-900">Projeção do período: {brl(projecao)}</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <Empty icon={<Clock className="h-6 w-6" />} title="Sem receita no período" text="Os valores aparecem aqui conforme os atendimentos são faturados." />
+                  )}
                 </section>
 
                 <div className="space-y-6">
@@ -332,22 +323,26 @@ export default function DashboardPage() {
                       </div>
                       <MoreVertical className="h-4 w-4 shrink-0 text-stone-400" />
                     </div>
-                    <div className="flex flex-col items-center gap-5 sm:flex-row lg:flex-col xl:flex-row">
-                      <Donut items={mixView} total={`R$ ${metrics?.faturamentoHoje || "0"}`} />
-                      <ul className="w-full space-y-2.5 text-sm">
-                        {mixView.map((item: any, idx: number) => (
-                          <li key={idx} className="flex items-center justify-between gap-3">
-                            <span className="flex min-w-0 items-center gap-2 text-stone-700">
-                              <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: DONUT_COLORS[idx % 4] }} />
-                              <span className="truncate">{item.label}</span>
-                            </span>
-                            <span className="shrink-0 text-stone-500">
-                              {item.pct} <span className="ml-1 font-medium text-stone-900">{item.val}</span>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    {mixView.length > 0 ? (
+                      <div className="flex flex-col items-center gap-5 sm:flex-row lg:flex-col xl:flex-row">
+                        <Donut items={mixView} total={`R$ ${metrics?.faturamentoHoje || "0"}`} />
+                        <ul className="w-full space-y-2.5 text-sm">
+                          {mixView.map((item: any, idx: number) => (
+                            <li key={idx} className="flex items-center justify-between gap-3">
+                              <span className="flex min-w-0 items-center gap-2 text-stone-700">
+                                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: DONUT_COLORS[idx % 4] }} />
+                                <span className="truncate">{item.label}</span>
+                              </span>
+                              <span className="shrink-0 text-stone-500">
+                                {item.pct} <span className="ml-1 font-medium text-stone-900">{item.val}</span>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <Empty icon={<Search className="h-5 w-5" />} title="Sem categorias" text="Nenhuma receita categorizada no período." compact />
+                    )}
                   </section>
 
                   <section className="rounded-xl border border-stone-300 bg-white p-4 sm:p-5">
@@ -437,6 +432,103 @@ export default function DashboardPage() {
         </div>
       </Modal>
     </AppShell>
+  );
+}
+
+// --- DADOS DOS GRÁFICOS ---
+const parseMoney = (v: any): number => {
+  if (typeof v === "number") return v;
+  if (!v) return 0;
+  const s = String(v).replace(/[^\d,.-]/g, "");
+  return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
+};
+const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const compact = (n: number) =>
+  n >= 1000 ? `R$ ${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil` : `R$ ${n}`;
+
+// Usa metrics.fluxoHorario [{ label, valor, projetado? }]; se não vier, soma os valores da agenda por hora.
+function buildFluxo(metrics: any): { label: string; valor: number; projetado?: number }[] {
+  if (Array.isArray(metrics?.fluxoHorario) && metrics.fluxoHorario.length) {
+    return metrics.fluxoHorario.map((p: any) => ({
+      label: String(p.label ?? p.hora),
+      valor: parseMoney(p.valor),
+      projetado: p.projetado != null ? parseMoney(p.projetado) : undefined,
+    }));
+  }
+  const byHour: Record<string, number> = {};
+  (metrics?.agenda || []).forEach((a: any) => {
+    const h = String(a.time || "").slice(0, 2);
+    if (!/^\d{2}$/.test(h)) return;
+    byHour[h] = (byHour[h] || 0) + parseMoney(a.val);
+  });
+  return Object.keys(byHour).sort().map((h) => ({ label: `${h}h`, valor: byHour[h] }));
+}
+
+function RevenueChart({ data }: { data: { label: string; valor: number; projetado?: number }[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(720);
+  const [hover, setHover] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const H = 260, L = 64, R = 16, T = 16, B = 30;
+  const max = Math.max(...data.map((d) => Math.max(d.valor, d.projetado ?? 0)), 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(max)));
+  const top = (Math.ceil((max / mag) * 2) / 2) * mag;
+  const x = (i: number) => (data.length === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (data.length - 1));
+  const y = (v: number) => T + (1 - v / top) * (H - T - B);
+  const path = (k: "valor" | "projetado") =>
+    data.map((d, i) => `${i ? "L" : "M"}${x(i)},${y((d as any)[k] ?? 0)}`).join(" ");
+  const step = Math.ceil(data.length / Math.max(2, Math.floor((W - L) / 56)));
+  const colW = data.length > 1 ? (W - L - R) / (data.length - 1) : W - L - R;
+  const h = hover != null ? data[hover] : null;
+
+  return (
+    <div ref={ref} className="w-full">
+      <svg width={W} height={H} role="img" aria-label="Faturamento por horário" className="block">
+        {[0, 1, 2, 3, 4].map((i) => {
+          const v = (top * i) / 4;
+          return (
+            <g key={i}>
+              <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#e7e5e4" />
+              <text x={L - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#78716c">{compact(v)}</text>
+            </g>
+          );
+        })}
+        {data.some((d) => d.projetado != null) && (
+          <path d={path("projetado")} fill="none" stroke="#a8a29e" strokeWidth="2" strokeDasharray="6 5" />
+        )}
+        <path d={`${path("valor")} L${x(data.length - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill="#0f766e" opacity="0.08" />
+        <path d={path("valor")} fill="none" stroke="#0f766e" strokeWidth="2.5" strokeLinejoin="round" />
+        {data.map((d, i) => (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(d.valor)} r={hover === i ? 5 : 3.5} fill="#fff" stroke="#0f766e" strokeWidth="2" />
+            {i % step === 0 && (
+              <text x={x(i)} y={H - 8} textAnchor="middle" fontSize="11" fill="#78716c">{d.label}</text>
+            )}
+            <rect
+              x={x(i) - colW / 2} y={T} width={Math.max(colW, 24)} height={H - T - B}
+              fill="transparent"
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+              onTouchStart={() => setHover(i)}
+            />
+          </g>
+        ))}
+        {h && hover != null && (
+          <g pointerEvents="none">
+            <rect x={Math.min(Math.max(x(hover) - 50, 4), W - 104)} y={Math.max(y(h.valor) - 48, 2)} width="100" height="38" rx="6" fill="#1c1917" />
+            <text x={Math.min(Math.max(x(hover) - 50, 4), W - 104) + 50} y={Math.max(y(h.valor) - 48, 2) + 16} textAnchor="middle" fontSize="11" fill="#d6d3d1">{h.label}</text>
+            <text x={Math.min(Math.max(x(hover) - 50, 4), W - 104) + 50} y={Math.max(y(h.valor) - 48, 2) + 31} textAnchor="middle" fontSize="12" fontWeight="600" fill="#fff">{brl(h.valor)}</text>
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }
 
