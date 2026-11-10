@@ -174,51 +174,40 @@ export default function ClientesPage() {
   };
 
 // DELETAR PACIENTE
-  const handleDeletePatient = async (e: React.MouseEvent, idParaDeletar: string) => {
-    e.stopPropagation();
-    
-    if (!idParaDeletar) {
-      alert("Erro no Front-end: ID inválido ou não encontrado.");
-      return;
-    }
+  // Extrai os IDs do corpo do pedido
+const { ids } = req.body; // (Ou @Body() body se for NestJS)
 
-    // Busca o paciente na lista atual para pegar o nome
-    const paciente = patients.find(p => p.id === idParaDeletar || p._id === idParaDeletar);
-    const nomePaciente = paciente ? paciente.name : "este paciente";
+if (!ids || !Array.isArray(ids) || ids.length === 0) {
+  return res.status(400).json({ message: "Nenhum ID fornecido para exclusão." });
+}
 
-    if (!window.confirm(`Tem certeza que deseja excluir ${nomePaciente} permanentemente?`)) return;
+try {
+  // 1. O Prisma tenta apagar todos os IDs que estão no array
+  const result = await prisma.patient.deleteMany({
+    where: {
+      id: {
+        in: ids,
+      },
+    },
+  });
 
-    const pacientesAnteriores = [...patients];
+  // 2. VERIFICAÇÃO CRUCIAL: Se apagou 0 linhas, avisa o front-end!
+  if (result.count === 0) {
+    return res.status(404).json({ 
+      message: "Nenhum paciente encontrado na base de dados com os IDs fornecidos." 
+    });
+  }
 
-    // 1. Atualização Otimista: Remove da tela imediatamente (cobre tanto id quanto _id)
-    setPatients(prev => prev.filter(p => p.id !== idParaDeletar && p._id !== idParaDeletar));
-    if (selectedPatientId === idParaDeletar) setSelectedPatientId(null);
+  // 3. Sucesso
+  return res.status(200).json({ 
+    message: "Pacientes excluídos com sucesso.", 
+    apagados: result.count 
+  });
 
-    try {
-      console.log(`Tentando excluir o ID: ${idParaDeletar}`);
-      
-      const res = await fetch(`${API_URL}/api/patients/batch`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [idParaDeletar] })
-      });
-
-      if (!res.ok) {
-        const errorMsg = await res.text();
-        throw new Error(`Erro da API (${res.status}): ${errorMsg}`);
-      }
-
-      console.log("✅ Paciente excluído com sucesso do banco!");
-
-    } catch (error) {
-      console.error("❌ Falha ao excluir no banco de dados:", error);
-      alert("O backend falhou ao excluir. O paciente voltará para a tela. Verifique o Console (F12).");
-      
-      // 3. Rollback: Devolve para a tela caso o backend recuse
-      setPatients(pacientesAnteriores);
-    }
-  };
-
+} catch (error) {
+  console.error("Erro no Prisma:", error);
+  return res.status(500).json({ message: "Erro interno ao apagar na base de dados." });
+}
   
   // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
