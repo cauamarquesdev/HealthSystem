@@ -173,41 +173,39 @@ export default function ClientesPage() {
     }
   };
 
-// DELETAR PACIENTE
-  // Extrai os IDs do corpo do pedido
-const { ids } = req.body; // (Ou @Body() body se for NestJS)
+// Extrai os IDs do corpo do pedido
+const { ids } = req.body; // (Ou equivalente no teu framework)
 
 if (!ids || !Array.isArray(ids) || ids.length === 0) {
   return res.status(400).json({ message: "Nenhum ID fornecido para exclusão." });
 }
 
-try {
-  // 1. O Prisma tenta apagar todos os IDs que estão no array
-  const result = await prisma.patient.deleteMany({
-    where: {
-      id: {
-        in: ids,
-      },
+// Executa o Prisma usando .then() e .catch()
+prisma.patient.deleteMany({
+  where: {
+    id: {
+      in: ids,
     },
-  });
-
-  // 2. VERIFICAÇÃO CRUCIAL: Se apagou 0 linhas, avisa o front-end!
+  },
+})
+.then((result) => {
+  // Verifica se o Prisma encontrou e apagou alguma coisa
   if (result.count === 0) {
     return res.status(404).json({ 
-      message: "Nenhum paciente encontrado na base de dados com os IDs fornecidos." 
+      message: "Nenhum paciente encontrado com os IDs fornecidos." 
     });
   }
 
-  // 3. Sucesso
+  // Sucesso
   return res.status(200).json({ 
     message: "Pacientes excluídos com sucesso.", 
     apagados: result.count 
   });
-
-} catch (error) {
+})
+.catch((error) => {
   console.error("Erro no Prisma:", error);
   return res.status(500).json({ message: "Erro interno ao apagar na base de dados." });
-}
+});
   
   // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
