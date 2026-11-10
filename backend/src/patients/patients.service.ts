@@ -80,7 +80,7 @@ export class PatientsService {
       const patient = p as any;
 
       // Cálculo do LTV (Lifetime Value) somando as vendas
-      const ltvTotal = patient.sales.reduce((acc, sale) => acc + Number(sale.totalAmount), 0);
+      const ltvTotal = patient.sales.reduce((acc: number, sale: any) => acc + Number(sale.totalAmount), 0);
       const ticketMedio = patient.sales.length > 0 ? ltvTotal / patient.sales.length : 0;
       
       const lastAppt = patient.appointments[0];
@@ -121,8 +121,8 @@ export class PatientsService {
         // Dados Financeiros
         ltvTotal: ltvTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
         ticketMedio: ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
-        contracts: `${p.sales.length} contratos`,
-        contratosPlanos: `${p.sales.length} quitados`, // Mock simplificado
+        contracts: `${patient.sales.length} contratos`,
+        contratosPlanos: `${patient.sales.length} quitados`, // Mock simplificado
         inadimplencia: "0 Inadimplência", // Mock simplificado
         
         // Dados da Lista
@@ -131,7 +131,7 @@ export class PatientsService {
         lastProc: lastProc,
 
         // Histórico para o painel lateral
-        history: p.appointments.map(a => ({
+        history: patient.appointments.map((a: any) => ({
           id: a.id,
           title: a.procedure?.name || "Consulta",
           date: new Date(a.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -141,10 +141,50 @@ export class PatientsService {
     });
   }
 
-  // ... (Os métodos findOne, update, toggleStatus e deleteBatch mantêm-se iguais)
-  async findOne(id: string) { /* ... */ }
-  async update(id: string, data: any) { /* ... */ }
-  async toggleStatus(id: string, active: boolean) { /* ... */ }
-  async deleteBatch(ids: string[]) { /* ... */ }
-  async remove(id: string) { /* ... */ }
+  async findOne(id: string) {
+    const patient = await this.prisma.patient.findUnique({ where: { id } });
+    if (!patient) throw new NotFoundException('Paciente não encontrado');
+    return patient;
+  }
+
+  async update(id: string, data: any) {
+    await this.findOne(id);
+    return this.prisma.patient.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async toggleStatus(id: string, active: boolean) {
+    await this.findOne(id);
+    return this.prisma.patient.update({
+      where: { id },
+      data: { active },
+    });
+  }
+
+  async deleteBatch(ids: string[]) {
+    if (!ids || ids.length === 0) {
+      throw new NotFoundException('Nenhum ID fornecido para exclusão.');
+    }
+
+    const result = await this.prisma.patient.deleteMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Nenhum paciente encontrado com os IDs fornecidos. O ID pode estar divergente.');
+    }
+
+    return { 
+      message: 'Pacientes excluídos com sucesso do banco de dados.', 
+      count: result.count 
+    };
+  }
+
+  async remove(id: string) {
+    return this.deleteBatch([id]);
+  }
 }
