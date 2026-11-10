@@ -173,32 +173,38 @@ export default function ClientesPage() {
     }
   };
 
-  // DELETAR PACIENTE
+ // DELETAR PACIENTE
   const handleDeletePatient = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!window.confirm("Tem certeza que deseja excluir este paciente permanentemente?")) return;
 
-    // 1. Atualização Otimista: Remove da tela imediatamente (funciona no Mock também)
+    // Salva o estado atual para poder reverter caso o backend dê erro
+    const pacientesAnteriores = [...patients];
+
+    // 1. Atualização Otimista: Remove da tela imediatamente
     setPatients(prev => prev.filter(p => p.id !== id));
     if (selectedPatientId === id) setSelectedPatientId(null);
 
     try {
-      // 2. Tenta deletar na API. 
-      // NOTA: Mudei para o padrão REST normal (/:id). 
-      // Se o seu backend REALMENTE exigir a rota /batch, volte para o código anterior do fetch.
-      const res = await fetch(`${API_URL}/api/patients/${id}`, {
+      // 2. Chama o banco de dados usando a SUA rota original (/batch)
+      const res = await fetch(`${API_URL}/api/patients/batch`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [id] })
       });
 
-      if (!res.ok) throw new Error("Erro ao excluir na API");
-      
+      if (!res.ok) {
+        throw new Error("O banco de dados recusou a exclusão.");
+      }
+
     } catch (error) {
-      console.warn("API offline ou erro ao excluir no backend.", error);
-      // Aqui você poderia recarregar a lista original chamando fetchPatients() 
-      // caso quisesse desfazer a exclusão se a API falhar no ambiente de produção.
+      console.error("Erro ao excluir no banco de dados:", error);
+      alert("Erro de conexão: O paciente não foi apagado do banco de dados e voltará para a tela.");
+      
+      // 3. Rollback: Se a API falhou, devolve o paciente para a tela para não te enganar
+      setPatients(pacientesAnteriores);
     }
   };
-
   // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
     const textMatch = p.name.toLowerCase().includes(busca.toLowerCase()) || 
