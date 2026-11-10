@@ -174,34 +174,46 @@ export default function ClientesPage() {
   };
 
  // DELETAR PACIENTE
-  const handleDeletePatient = async (e: React.MouseEvent, id: string) => {
+  const handleDeletePatient = async (e: React.MouseEvent, patient: any) => {
     e.stopPropagation();
-    if (!window.confirm("Tem certeza que deseja excluir este paciente permanentemente?")) return;
+    
+    // BLINDAGEM: Garante que vai pegar o ID correto (id normal ou _id do MongoDB)
+    const idParaDeletar = patient.id || patient._id;
 
-    // Salva o estado atual para poder reverter caso o backend dê erro
+    if (!idParaDeletar) {
+      alert("Erro no Front-end: O paciente não possui um ID válido para ser excluído.");
+      return;
+    }
+
+    if (!window.confirm(`Tem certeza que deseja excluir ${patient.name} permanentemente?`)) return;
+
     const pacientesAnteriores = [...patients];
 
-    // 1. Atualização Otimista: Remove da tela imediatamente
-    setPatients(prev => prev.filter(p => p.id !== id));
-    if (selectedPatientId === id) setSelectedPatientId(null);
+    // Atualização Otimista: Remove da tela na mesma hora
+    setPatients(prev => prev.filter(p => (p.id || p._id) !== idParaDeletar));
+    if (selectedPatientId === idParaDeletar) setSelectedPatientId(null);
 
     try {
-      // 2. Chama o banco de dados usando a SUA rota original (/batch)
+      console.log(`Tentando excluir o ID: ${idParaDeletar}`);
+      
       const res = await fetch(`${API_URL}/api/patients/batch`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [id] })
+        body: JSON.stringify({ ids: [idParaDeletar] })
       });
 
       if (!res.ok) {
-        throw new Error("O banco de dados recusou a exclusão.");
+        const errorMsg = await res.text();
+        throw new Error(`Erro da API (${res.status}): ${errorMsg}`);
       }
 
+      console.log("✅ Paciente excluído com sucesso do banco de dados!");
+
     } catch (error) {
-      console.error("Erro ao excluir no banco de dados:", error);
-      alert("Erro de conexão: O paciente não foi apagado do banco de dados e voltará para a tela.");
+      console.error("❌ Falha ao excluir no banco de dados:", error);
+      alert("O backend falhou ao excluir. O paciente voltará para a tela. Abra o F12 (Console) para ver o erro exato.");
       
-      // 3. Rollback: Se a API falhou, devolve o paciente para a tela para não te enganar
+      // Reverte a tela para mostrar que não apagou
       setPatients(pacientesAnteriores);
     }
   };
