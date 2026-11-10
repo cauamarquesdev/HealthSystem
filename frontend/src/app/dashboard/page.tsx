@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Plus, Download, MoreVertical, Clock, Gift, MessageCircle,
@@ -11,6 +12,8 @@ import { AppShell } from "../../components/AppShell"; // Ajuste o caminho confor
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
+// Ajuste para a rota real da sua agenda
+const ROTA_AGENDA = "/";
 const FILTROS = ["Hoje", "Esta semana", "Este mês"];
 const DONUT_COLORS = ["#0f766e", "#334155", "#5eaaa0", "#cbd5d1"];
 
@@ -222,9 +225,9 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex items-center justify-between border-t border-stone-200 px-4 py-3 text-sm sm:px-5">
-                    <button className="inline-flex items-center gap-1 font-medium text-teal-700 hover:text-teal-800">
+                    <Link href={ROTA_AGENDA} className="inline-flex items-center gap-1 font-medium text-teal-700 hover:text-teal-800">
                       Ver grade completa <ChevronRight className="h-4 w-4" />
-                    </button>
+                    </Link>
                     <span className="text-stone-400">Atualizado há 2 min</span>
                   </div>
                 </section>
