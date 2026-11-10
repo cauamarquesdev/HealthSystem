@@ -495,35 +495,35 @@ export default function AgendaPage() {
     <AppShell trilha={["Operação", "Agenda Pessoal"]}>
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50 h-full">
         {/* TOP CONTROLS */}
-        <div className="px-8 pt-6 pb-4 shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm relative">
-          <div className="flex justify-between items-start mb-6">
+        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-4 shrink-0 bg-white border-b border-slate-200 z-10 shadow-sm relative">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
             <div>
-              <h1 className="text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5">
+              <h1 className="text-[22px] sm:text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5">
                 Agenda Clínica Exclusiva
               </h1>
-              <p className="text-[13px] font-medium text-slate-500 uppercase tracking-widest">
+              <p className="text-[12px] sm:text-[13px] font-medium text-slate-500 uppercase tracking-widest">
                 Gestão de Horários • {usuario?.nome || "Dra. Joana Oliveira"}
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <button onClick={openBlockModal} className="h-10 px-4 rounded-xl font-bold text-xs text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
-                <Lock className="w-4 h-4 text-slate-400" /> Bloquear Horário
+            <div className="flex flex-wrap gap-2 shrink-0 w-full lg:w-auto">
+              <button onClick={openBlockModal} className="h-10 px-4 rounded-xl font-bold text-xs text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm flex-1 lg:flex-none justify-center">
+                <Lock className="w-4 h-4 text-slate-400" /> <span className="hidden sm:inline">Bloquear Horário</span>
               </button>
-              <button onClick={() => setIsQuickFitOpen(true)} className="h-10 px-4 rounded-xl font-bold text-xs text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-2 shadow-sm">
-                <Zap className="w-4 h-4 text-amber-500" /> Encaixe Rápido
+              <button onClick={() => setIsQuickFitOpen(true)} className="h-10 px-4 rounded-xl font-bold text-xs text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors flex items-center gap-2 shadow-sm flex-1 lg:flex-none justify-center">
+                <Zap className="w-4 h-4 text-amber-500" /> <span className="hidden sm:inline">Encaixe Rápido</span>
               </button>
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="h-10 px-6 rounded-xl font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm ml-1"
+                className="h-10 px-4 sm:px-6 rounded-xl font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-colors flex items-center gap-2 shadow-sm lg:ml-1 w-full sm:w-auto justify-center"
               >
                 <Plus className="w-4 h-4" /> Novo Agendamento
               </button>
             </div>
           </div>
 
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-inner">
+          <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-4 md:mb-6 gap-4">
+            <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1 shadow-inner shrink-0">
                 <button
                   onClick={goToday}
                   className={`px-4 py-1.5 text-[13px] font-bold rounded-lg transition-colors ${isToday ? "text-slate-900 bg-white shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
@@ -545,7 +545,7 @@ export default function AgendaPage() {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={() => dateInputRef.current?.showPicker?.()}
                   aria-label="Escolher data"
@@ -561,33 +561,33 @@ export default function AgendaPage() {
                     tabIndex={-1}
                   />
                 </button>
-                <h2 className="text-[19px] font-black text-slate-900" suppressHydrationWarning>
+                <h2 className="text-[17px] sm:text-[19px] font-black text-slate-900" suppressHydrationWarning>
                   {formatLongDate(selectedDate)}
                 </h2>
-                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded ml-2" suppressHydrationWarning>
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded ml-1 sm:ml-2 whitespace-nowrap" suppressHydrationWarning>
                   {dayAppointments.length} Atendimentos{isToday ? " Hoje" : ""}
                 </span>
               </div>
             </div>
 
-            <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1.5 shrink-0">
-              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+            <div className="flex overflow-x-auto bg-slate-50 border border-slate-200 rounded-xl p-1.5 shrink-0 max-w-full">
+              <button className="px-4 sm:px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700 whitespace-nowrap">
                 Diária
               </button>
-              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg bg-white text-blue-600 shadow-sm flex items-center gap-2">
-                {usuario?.nome?.split(' ')[0] || "Dra. Joana"} <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
+              <button className="px-4 sm:px-5 py-1.5 text-[13px] font-bold rounded-lg bg-white text-blue-600 shadow-sm flex items-center gap-2 whitespace-nowrap">
+                {usuario?.nome?.split(' ')[0] || "Dra. Joana"} <div className="w-1.5 h-1.5 bg-blue-600 rounded-full shrink-0"></div>
               </button>
-              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+              <button className="px-4 sm:px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700 whitespace-nowrap">
                 Por Sala
               </button>
-              <button className="px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700">
+              <button className="px-4 sm:px-5 py-1.5 text-[13px] font-bold rounded-lg text-slate-500 hover:text-slate-700 whitespace-nowrap">
                 Lista
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex ml-auto gap-3 shrink-0">
+          <div className="flex w-full overflow-x-auto pb-2 -mb-2 no-scrollbar">
+            <div className="flex lg:ml-auto gap-3 shrink-0">
               <FilterPill
                 label={`Confirmados (${dayEvents.filter(e => e.status === "Confirmado").length})`}
                 active={activeFilters.includes("Confirmado")}
@@ -616,181 +616,188 @@ export default function AgendaPage() {
               />
             </div>
           </div>
+        </div>
 
-          {/* MAIN GRID */}
-          <div className="flex-1 flex min-h-0 bg-white relative">
-            {isLoading ? (
-               <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-3 z-50 bg-white/80">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                  <span className="text-sm font-bold text-slate-600">Sincronizando Agenda...</span>
-               </div>
-            ) : null}
+        {/* MAIN GRID & SIDEBAR CONTAINER */}
+        <div className="flex-1 flex min-h-0 bg-white relative overflow-hidden">
+          {isLoading ? (
+             <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-3 z-50 bg-white/80">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                <span className="text-sm font-bold text-slate-600">Sincronizando Agenda...</span>
+             </div>
+          ) : null}
 
-            <div ref={scrollRef} className="flex-1 flex flex-col min-w-0 overflow-auto custom-scrollbar">
-              {/* Header Coluna Única */}
-              <div className="flex sticky top-0 bg-white z-30 border-b border-slate-200 shadow-sm w-full">
-                <div className="w-20 min-w-[80px] shrink-0 border-r border-slate-200 flex items-center justify-center bg-white">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    HORA
-                  </span>
-                </div>
-                <ProfColumnHeader
-                  name={usuario?.nome || "Dra. Joana Oliveira"}
-                  role={usuario?.cargo || "SUÍTE VIP PREMIUM"}
-                  room="Sala 01 VIP"
-                  pts={`${filteredAppointmentsCount} Atendimentos`}
-                  avatar={usuario?.avatar}
-                  className="flex-1"
-                />
+          {/* ÁREA DA GRADE PRINCIPAL */}
+          <div ref={scrollRef} className="flex-1 flex flex-col min-w-0 overflow-auto custom-scrollbar">
+            {/* Header Coluna Única */}
+            <div className="flex sticky top-0 bg-white z-30 border-b border-slate-200 shadow-sm w-full">
+              <div className="w-16 sm:w-20 shrink-0 border-r border-slate-200 flex items-center justify-center bg-white">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  HORA
+                </span>
               </div>
-
-              {/* Corpo da Grelha */}
-              <div className="flex w-full bg-white">
-                {/* Eixo de horas */}
-                <div className="w-20 min-w-[80px] shrink-0 border-r border-slate-200 bg-slate-50/60 pt-4 pb-10">
-                  <div className="relative" style={{ height: GRID_HEIGHT }}>
-                    {SLOT_INDEXES.map((i) => {
-                      const mins = GRID_START + i * SLOT_MIN;
-                      const isHour = mins % 60 === 0;
-                      return (
-                        <span
-                          key={i}
-                          className={`absolute right-3 -translate-y-1/2 leading-none tabular-nums ${isHour ? "text-[12px] font-bold text-slate-600" : "text-[10px] font-medium text-slate-300"}`}
-                          style={{ top: i * SLOT_H }}
-                        >
-                          {toTime(mins)}
-                        </span>
-                      );
-                    })}
-                    {isToday && nowMin >= GRID_START && nowMin <= GRID_END && (
-                      <span
-                        className="absolute right-2 z-10 -translate-y-1/2 bg-rose-500 text-white text-[10px] font-bold rounded px-1.5 py-0.5 leading-none tabular-nums"
-                        style={{ top: (nowMin - GRID_START) * PPM }}
-                      >
-                        {toTime(nowMin)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Área de eventos arrastáveis */}
-                <div className="flex-1 min-w-0 pt-4 pb-10">
-                  <div
-                    className="relative"
-                    style={{ height: GRID_HEIGHT }}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    {/* Linhas da grade */}
-                    {SLOT_INDEXES.map((i) => {
-                      const isHour = (GRID_START + i * SLOT_MIN) % 60 === 0;
-                      return (
-                        <div
-                          key={i}
-                          className={`absolute inset-x-0 border-t ${isHour ? "border-slate-200" : "border-dashed border-slate-100"}`}
-                          style={{ top: i * SLOT_H }}
-                        />
-                      );
-                    })}
-                    <div className="absolute inset-x-0 border-t border-slate-200" style={{ top: GRID_HEIGHT }} />
-
-                    {/* Linha de "agora" */}
-                    {isToday && nowMin >= GRID_START && nowMin <= GRID_END && (
-                      <div
-                        className="absolute inset-x-0 z-20 pointer-events-none"
-                        style={{ top: (nowMin - GRID_START) * PPM }}
-                      >
-                        <div className="relative border-t-2 border-rose-500">
-                          <span className="absolute -left-1 -top-[5px] w-2 h-2 rounded-full bg-rose-500" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Estado vazio */}
-                    {!isLoading && filteredEvents.length === 0 && (
-                      <div className="absolute inset-x-0 top-24 flex flex-col items-center gap-1 text-center pointer-events-none">
-                        <span className="text-sm font-bold text-slate-500">Nenhum compromisso neste dia</span>
-                        <span className="text-xs font-medium text-slate-400">Use “Novo Agendamento” ou “Encaixe Rápido” para preencher a agenda.</span>
-                      </div>
-                    )}
-
-                    {filteredEvents.map((event) => {
-                      const top = timeToPixels(event.timeStart);
-                      const height = calculateDurationPixels(event.timeStart, event.timeEnd);
-                      const pos = layout[event.id] ?? { lane: 0, lanes: 1 };
-                      const isBlock = event.status === "Bloqueado";
-                      return (
-                        <div
-                          key={event.id}
-                          draggable={!isBlock}
-                          onDragStart={(e) => handleDragStart(e, event.id)}
-                          style={{
-                            top: `${top + 1}px`,
-                            height: `${height - 2}px`,
-                            left: `calc(${(pos.lane * 100) / pos.lanes}% + 8px)`,
-                            width: `calc(${100 / pos.lanes}% - 12px)`,
-                          }}
-                          className="absolute z-10"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setSelectedAppointment(event)}
-                            onMouseDown={(e) => { if (e.detail > 1) e.preventDefault(); }}
-                            aria-label={`Ver detalhes de ${event.patientName}`}
-                            className={`w-full h-full text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${selectedAppointment?.id === event.id ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-                          >
-                            <EventCard
-                              title={event.patientName}
-                              procedure={event.procedure}
-                              timeStart={event.timeStart}
-                              timeEnd={event.timeEnd}
-                              value={event.value}
-                              status={event.status}
-                              height={height}
-                            />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              <ProfColumnHeader
+                name={usuario?.nome || "Dra. Joana Oliveira"}
+                role={usuario?.cargo || "SUÍTE VIP PREMIUM"}
+                room="Sala 01 VIP"
+                pts={`${filteredAppointmentsCount} Atendimentos`}
+                avatar={usuario?.avatar}
+                className="flex-1"
+              />
             </div>
 
-            {/* PAINEL LATERAL DE DETALHES DO AGENDAMENTO */}
-            <div className="w-[360px] shrink-0 bg-white border-l border-slate-200 flex flex-col z-30 shadow-[-10px_0_30px_rgba(0,0,0,0.02)] overflow-y-auto">
-              {selectedAppointment ? (
-                <div className="p-6 flex flex-col gap-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600">Detalhes do agendamento</p>
-                      <h3 className="text-lg font-black text-slate-900 mt-1">{selectedAppointment.patientName}</h3>
-                      <span className={`inline-flex mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_STYLES[selectedAppointment.status]?.badge ?? DEFAULT_STATUS_STYLE.badge}`}>{selectedAppointment.status}</span>
-                    </div>
-                    <button type="button" onClick={() => setSelectedAppointment(null)} aria-label="Fechar detalhes" className="p-2 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
-                  </div>
-                  <div className="space-y-4">
-                    <DetailRow label="Procedimento" value={selectedAppointment.procedure || "Não informado"} />
-                    <DetailRow label="Data" value={selectedAppointment.date ? formatLongDate(fromISO(selectedAppointment.date)) : "Não informada"} />
-                    <DetailRow label="Horário" value={`${selectedAppointment.timeStart} – ${selectedAppointment.timeEnd}`} />
-                    <DetailRow label="Valor previsto" value={selectedAppointment.value || "Não informado"} />
-                    <DetailRow label="Profissional" value={selectedAppointment.doc || "Não informada"} />
-                    <DetailRow label="Sala" value={selectedAppointment.room || "Não informada"} />
-                  </div>
-                  {selectedAppointment.status !== "Bloqueado" && (
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                      <button type="button" onClick={openEditAppointment} className="h-10 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-blue-700"><Pencil className="w-3.5 h-3.5" /> Editar</button>
-                      <button type="button" disabled={isSaving} onClick={deleteAppointment} className="h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs font-bold flex items-center justify-center gap-2 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="w-3.5 h-3.5" /> Excluir</button>
-                    </div>
+            {/* Corpo da Grelha */}
+            <div className="flex w-full bg-white">
+              {/* Eixo de horas */}
+              <div className="w-16 sm:w-20 shrink-0 border-r border-slate-200 bg-slate-50/60 pt-4 pb-10">
+                <div className="relative" style={{ height: GRID_HEIGHT }}>
+                  {SLOT_INDEXES.map((i) => {
+                    const mins = GRID_START + i * SLOT_MIN;
+                    const isHour = mins % 60 === 0;
+                    return (
+                      <span
+                        key={i}
+                        className={`absolute right-2 sm:right-3 -translate-y-1/2 leading-none tabular-nums ${isHour ? "text-[11px] sm:text-[12px] font-bold text-slate-600" : "text-[9px] sm:text-[10px] font-medium text-slate-300"}`}
+                        style={{ top: i * SLOT_H }}
+                      >
+                        {toTime(mins)}
+                      </span>
+                    );
+                  })}
+                  {isToday && nowMin >= GRID_START && nowMin <= GRID_END && (
+                    <span
+                      className="absolute right-1 sm:right-2 z-10 -translate-y-1/2 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold rounded px-1.5 py-0.5 leading-none tabular-nums"
+                      style={{ top: (nowMin - GRID_START) * PPM }}
+                    >
+                      {toTime(nowMin)}
+                    </span>
                   )}
                 </div>
-              ) : (
-                <div className="p-6 text-center text-slate-400 mt-20">
-                  <Calendar className="w-8 h-8 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm font-medium">Selecione um atendimento para visualizar os detalhes aqui.</p>
+              </div>
+
+              {/* Área de eventos arrastáveis */}
+              <div className="flex-1 min-w-0 pt-4 pb-10">
+                <div
+                  className="relative"
+                  style={{ height: GRID_HEIGHT }}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                >
+                  {/* Linhas da grade */}
+                  {SLOT_INDEXES.map((i) => {
+                    const isHour = (GRID_START + i * SLOT_MIN) % 60 === 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`absolute inset-x-0 border-t ${isHour ? "border-slate-200" : "border-dashed border-slate-100"}`}
+                        style={{ top: i * SLOT_H }}
+                      />
+                    );
+                  })}
+                  <div className="absolute inset-x-0 border-t border-slate-200" style={{ top: GRID_HEIGHT }} />
+
+                  {/* Linha de "agora" */}
+                  {isToday && nowMin >= GRID_START && nowMin <= GRID_END && (
+                    <div
+                      className="absolute inset-x-0 z-20 pointer-events-none"
+                      style={{ top: (nowMin - GRID_START) * PPM }}
+                    >
+                      <div className="relative border-t-2 border-rose-500">
+                        <span className="absolute -left-1 -top-[5px] w-2 h-2 rounded-full bg-rose-500" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Estado vazio */}
+                  {!isLoading && filteredEvents.length === 0 && (
+                    <div className="absolute inset-x-0 top-24 flex flex-col items-center gap-1 text-center pointer-events-none px-4">
+                      <span className="text-sm font-bold text-slate-500">Nenhum compromisso neste dia</span>
+                      <span className="text-xs font-medium text-slate-400">Use “Novo Agendamento” ou “Encaixe Rápido” para preencher a agenda.</span>
+                    </div>
+                  )}
+
+                  {filteredEvents.map((event) => {
+                    const top = timeToPixels(event.timeStart);
+                    const height = calculateDurationPixels(event.timeStart, event.timeEnd);
+                    const pos = layout[event.id] ?? { lane: 0, lanes: 1 };
+                    const isBlock = event.status === "Bloqueado";
+                    return (
+                      <div
+                        key={event.id}
+                        draggable={!isBlock}
+                        onDragStart={(e) => handleDragStart(e, event.id)}
+                        style={{
+                          top: `${top + 1}px`,
+                          height: `${height - 2}px`,
+                          left: `calc(${(pos.lane * 100) / pos.lanes}% + 4px)`,
+                          width: `calc(${100 / pos.lanes}% - 8px)`,
+                        }}
+                        className="absolute z-10 sm:left-[calc(${(pos.lane * 100) / pos.lanes}% + 8px)] sm:w-[calc(${100 / pos.lanes}% - 12px)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAppointment(event)}
+                          onMouseDown={(e) => { if (e.detail > 1) e.preventDefault(); }}
+                          aria-label={`Ver detalhes de ${event.patientName}`}
+                          className={`w-full h-full text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${selectedAppointment?.id === event.id ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+                        >
+                          <EventCard
+                            title={event.patientName}
+                            procedure={event.procedure}
+                            timeStart={event.timeStart}
+                            timeEnd={event.timeEnd}
+                            value={event.value}
+                            status={event.status}
+                            height={height}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
             </div>
+          </div>
+
+          {/* OVERLAY MOBILE PARA O PAINEL LATERAL */}
+          <div 
+            className={`md:hidden absolute inset-0 bg-slate-900/20 z-30 transition-opacity duration-300 ${selectedAppointment ? "opacity-100 visible" : "opacity-0 invisible"}`}
+            onClick={() => setSelectedAppointment(null)}
+          />
+
+          {/* PAINEL LATERAL DE DETALHES DO AGENDAMENTO */}
+          <div className={`absolute md:relative right-0 top-0 h-full w-[85%] max-w-[360px] md:w-[360px] shrink-0 bg-white md:border-l border-slate-200 flex flex-col z-40 md:z-30 shadow-2xl md:shadow-none overflow-y-auto transform transition-transform duration-300 ${selectedAppointment ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
+            {selectedAppointment ? (
+              <div className="p-5 md:p-6 flex flex-col gap-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600">Detalhes do agendamento</p>
+                    <h3 className="text-lg font-black text-slate-900 mt-1">{selectedAppointment.patientName}</h3>
+                    <span className={`inline-flex mt-2 px-2.5 py-1 rounded-full text-[10px] font-bold ${STATUS_STYLES[selectedAppointment.status]?.badge ?? DEFAULT_STATUS_STYLE.badge}`}>{selectedAppointment.status}</span>
+                  </div>
+                  <button type="button" onClick={() => setSelectedAppointment(null)} aria-label="Fechar detalhes" className="p-2 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-4">
+                  <DetailRow label="Procedimento" value={selectedAppointment.procedure || "Não informado"} />
+                  <DetailRow label="Data" value={selectedAppointment.date ? formatLongDate(fromISO(selectedAppointment.date)) : "Não informada"} />
+                  <DetailRow label="Horário" value={`${selectedAppointment.timeStart} – ${selectedAppointment.timeEnd}`} />
+                  <DetailRow label="Valor previsto" value={selectedAppointment.value || "Não informado"} />
+                  <DetailRow label="Profissional" value={selectedAppointment.doc || "Não informada"} />
+                  <DetailRow label="Sala" value={selectedAppointment.room || "Não informada"} />
+                </div>
+                {selectedAppointment.status !== "Bloqueado" && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onClick={openEditAppointment} className="h-10 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-center gap-2 hover:bg-blue-700"><Pencil className="w-3.5 h-3.5" /> Editar</button>
+                    <button type="button" disabled={isSaving} onClick={deleteAppointment} className="h-10 rounded-xl bg-rose-50 text-rose-700 border border-rose-100 text-xs font-bold flex items-center justify-center gap-2 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="w-3.5 h-3.5" /> Excluir</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="hidden md:block p-6 text-center text-slate-400 mt-20">
+                <Calendar className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+                <p className="text-sm font-medium">Selecione um atendimento para visualizar os detalhes aqui.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -799,18 +806,18 @@ export default function AgendaPage() {
       <AnimatePresence>
         {isEditAppointmentOpen && editAppointmentData && (
           <ModalShell onClose={() => setIsEditAppointmentOpen(false)} maxWidth="max-w-[520px]">
-            <form onSubmit={saveAppointmentEdit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
+            <form onSubmit={saveAppointmentEdit} className="p-5 md:p-6 space-y-4 overflow-y-auto custom-scrollbar">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">Editar agendamento</h2>
-                  <p className="text-xs text-slate-500 mt-1">Altere os dados da marcação selecionada.</p>
+                  <h2 className="text-lg md:text-xl font-black text-slate-900">Editar agendamento</h2>
+                  <p className="text-[11px] md:text-xs text-slate-500 mt-1">Altere os dados da marcação selecionada.</p>
                 </div>
                 <button type="button" onClick={() => setIsEditAppointmentOpen(false)} aria-label="Fechar edição" className="p-2 rounded-lg text-slate-400 hover:bg-slate-100"><X className="w-4 h-4" /></button>
               </div>
               <div className="space-y-1.5"><label className={labelCls}>Cliente</label><input className={inputCls} value={editAppointmentData.patientName} onChange={e => setEditAppointmentData({ ...editAppointmentData, patientName: e.target.value })} required /></div>
               <div className="space-y-1.5"><label className={labelCls}>Procedimento</label><input className={inputCls} value={editAppointmentData.procedure} onChange={e => setEditAppointmentData({ ...editAppointmentData, procedure: e.target.value })} required /></div>
               <div className="space-y-1.5"><label className={labelCls}>Data</label><input className={inputCls} type="date" value={editAppointmentData.date ?? selectedISO} onChange={e => setEditAppointmentData({ ...editAppointmentData, date: e.target.value })} required /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5"><label className={labelCls}>Início</label><input className={inputCls} type="time" value={editAppointmentData.timeStart} onChange={e => setEditAppointmentData({ ...editAppointmentData, timeStart: e.target.value })} required /></div>
                 <div className="space-y-1.5"><label className={labelCls}>Fim</label><input className={inputCls} type="time" value={editAppointmentData.timeEnd} onChange={e => setEditAppointmentData({ ...editAppointmentData, timeEnd: e.target.value })} required /></div>
               </div>
@@ -840,14 +847,14 @@ export default function AgendaPage() {
         {isBlockTimeOpen && (
           <ModalShell onClose={() => setIsBlockTimeOpen(false)} maxWidth="max-w-[480px]">
             {/* Header */}
-            <div className="px-6 pt-6 pb-5 border-b border-slate-100 flex items-start justify-between gap-4">
+            <div className="px-5 md:px-6 pt-5 md:pt-6 pb-4 border-b border-slate-100 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center shrink-0 shadow-sm">
                   <Lock className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Bloquear horário</h2>
-                  <p className="text-[12px] font-medium text-slate-500 mt-0.5">{usuario?.nome || "Dra. Joana Oliveira"} • Sala 01 VIP</p>
+                  <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Bloquear horário</h2>
+                  <p className="text-[11px] md:text-[12px] font-medium text-slate-500 mt-0.5">{usuario?.nome || "Dra. Joana Oliveira"} • Sala 01 VIP</p>
                 </div>
               </div>
               <button
@@ -860,7 +867,7 @@ export default function AgendaPage() {
               </button>
             </div>
 
-            <form id="blockTimeForm" onSubmit={handleSaveBlock} className="px-6 py-5 space-y-5 max-h-[65vh] overflow-y-auto custom-scrollbar">
+            <form id="blockTimeForm" onSubmit={handleSaveBlock} className="px-5 md:px-6 py-5 space-y-5 max-h-[65vh] overflow-y-auto custom-scrollbar">
               {/* Motivo rápido */}
               <div className="space-y-2">
                 <span className={labelCls}>Motivo</span>
@@ -930,7 +937,7 @@ export default function AgendaPage() {
               {/* Horários */}
               {!blockData.allDay && (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <label className={labelCls}>Início</label>
                       <input value={blockData.timeStart} onChange={(e) => setBlockData({ ...blockData, timeStart: e.target.value })} type="time" step={900} className={inputCls} />
@@ -940,8 +947,8 @@ export default function AgendaPage() {
                       <input value={blockData.timeEnd} onChange={(e) => setBlockData({ ...blockData, timeEnd: e.target.value })} type="time" step={900} className={inputCls} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-[11px] font-bold text-slate-400">Duração rápida</span>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] font-bold text-slate-400 w-full sm:w-auto">Duração rápida</span>
                     {[30, 60, 120].map((d) => (
                       <button
                         key={d}
@@ -960,11 +967,11 @@ export default function AgendaPage() {
               {/* Resumo / alertas */}
               {blockValid ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center shrink-0 hidden sm:flex">
                     <Clock className="w-4 h-4 text-slate-500" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-slate-900 truncate" suppressHydrationWarning>
+                    <p className="text-[12px] sm:text-[13px] font-bold text-slate-900 truncate" suppressHydrationWarning>
                       {formatShortDate(fromISO(blockData.date))} • {blockStart} – {blockEnd}
                     </p>
                     <p className="text-[11px] font-medium text-slate-500">
@@ -999,7 +1006,7 @@ export default function AgendaPage() {
             </form>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex justify-end gap-3">
+            <div className="px-5 md:px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex justify-end gap-3">
               <button type="button" disabled={isSaving} onClick={() => setIsBlockTimeOpen(false)} className="h-10 px-4 rounded-xl text-[12px] font-bold text-slate-600 hover:bg-slate-100 transition-colors">
                 Cancelar
               </button>
@@ -1039,7 +1046,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function ModalShell({ onClose, maxWidth = "max-w-[480px]", children }: any) {
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-3 sm:p-4">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1054,7 +1061,7 @@ function ModalShell({ onClose, maxWidth = "max-w-[480px]", children }: any) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 16 }}
         transition={{ duration: 0.18 }}
-        className={`relative w-full ${maxWidth} bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]`}
+        className={`relative w-full ${maxWidth} bg-white rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] md:max-h-[92vh]`}
       >
         {children}
       </motion.div>
@@ -1076,22 +1083,22 @@ function FilterPill({ label, active, color, border, dot, onClick }: any) {
 
 function ProfColumnHeader({ name, role, room, pts, avatar, className }: any) {
   return (
-    <div className={`min-w-[320px] shrink-0 p-4 bg-slate-50/30 flex items-center gap-4 relative ${className}`}>
+    <div className={`min-w-[240px] md:min-w-[320px] shrink-0 p-3 sm:p-4 bg-slate-50/30 flex items-center gap-3 sm:gap-4 relative ${className}`}>
       <Avatar nome={name} foto={avatar} size={44} />
       <div className="flex flex-col min-w-0">
-        <span className="text-[14px] font-bold text-slate-900 leading-tight truncate">
+        <span className="text-[13px] sm:text-[14px] font-bold text-slate-900 leading-tight truncate">
           {name}
         </span>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate">
+        <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate">
           {role}
         </span>
       </div>
       <div className="ml-auto text-right shrink-0">
-        <span className="text-[11px] font-bold text-slate-600 block leading-tight flex items-center gap-1 justify-end">
-          <MapPin className="w-3 h-3 shrink-0" />{" "}
-          <span className="truncate max-w-[80px]">{room}</span>
+        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 block leading-tight flex items-center gap-1 justify-end">
+          <MapPin className="w-3 h-3 shrink-0 hidden sm:block" />{" "}
+          <span className="truncate max-w-[60px] sm:max-w-[80px]">{room}</span>
         </span>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1.5 inline-block border border-blue-100">
+        <span className="text-[9px] sm:text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1.5 inline-block border border-blue-100">
           {pts}
         </span>
       </div>
@@ -1116,17 +1123,17 @@ function EventCard({ title, procedure, timeStart, timeEnd, value, status, height
   if (isBloqueado) {
     return (
       <div
-        className="w-full h-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-100 px-3 flex items-center gap-2.5 overflow-hidden cursor-not-allowed"
+        className="w-full h-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-100 px-2 sm:px-3 flex items-center gap-2 sm:gap-2.5 overflow-hidden cursor-not-allowed"
         style={{ backgroundImage: "repeating-linear-gradient(135deg, transparent 0 8px, rgba(148,163,184,0.14) 8px 16px)" }}
       >
-        <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+        <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-slate-400 shrink-0" />
         <div className="min-w-0">
-          <p className="text-[12px] font-bold text-slate-600 truncate leading-tight">{procedure || title}</p>
+          <p className="text-[11px] sm:text-[12px] font-bold text-slate-600 truncate leading-tight">{procedure || title}</p>
           {!compact && (
-            <p className="text-[11px] font-medium text-slate-400 leading-tight mt-0.5">Bloqueado • {timeStart} – {timeEnd}</p>
+            <p className="text-[10px] sm:text-[11px] font-medium text-slate-400 leading-tight mt-0.5">Bloqueado • {timeStart} – {timeEnd}</p>
           )}
         </div>
-        {compact && <span className="ml-auto text-[11px] font-bold text-slate-400 shrink-0 tabular-nums">{timeStart} – {timeEnd}</span>}
+        {compact && <span className="ml-auto text-[10px] sm:text-[11px] font-bold text-slate-400 shrink-0 tabular-nums hidden sm:inline">{timeStart} – {timeEnd}</span>}
       </div>
     );
   }
@@ -1139,28 +1146,28 @@ function EventCard({ title, procedure, timeStart, timeEnd, value, status, height
     >
       <div className={`w-1 shrink-0 ${s.bar}`}></div>
       {compact ? (
-        <div className="flex-1 min-w-0 px-3 flex items-center gap-2">
-          <h4 className="font-black text-[12px] text-slate-900 truncate">{title}</h4>
-          <span className="text-[11px] font-medium text-slate-500 truncate hidden sm:inline">{procedure}</span>
-          <span className="ml-auto text-[11px] font-bold text-slate-400 shrink-0 tabular-nums">{timeStart} – {timeEnd}</span>
+        <div className="flex-1 min-w-0 px-2 sm:px-3 flex items-center gap-2">
+          <h4 className="font-black text-[11px] sm:text-[12px] text-slate-900 truncate">{title}</h4>
+          <span className="text-[10px] sm:text-[11px] font-medium text-slate-500 truncate hidden sm:inline">{procedure}</span>
+          <span className="ml-auto text-[10px] sm:text-[11px] font-bold text-slate-400 shrink-0 tabular-nums hidden sm:inline">{timeStart} – {timeEnd}</span>
         </div>
       ) : (
-        <div className="flex-1 min-w-0 px-3.5 py-2.5 flex flex-col justify-between">
+        <div className="flex-1 min-w-0 px-2 sm:px-3.5 py-1.5 sm:py-2.5 flex flex-col justify-between">
           <div>
-            <div className="flex justify-between items-start gap-2">
-              <h4 className="font-black text-[13px] text-slate-900 leading-tight truncate">{title}</h4>
-              <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest ${s.badge}`}>
+            <div className="flex justify-between items-start gap-1 sm:gap-2">
+              <h4 className="font-black text-[12px] sm:text-[13px] text-slate-900 leading-tight truncate">{title}</h4>
+              <span className={`shrink-0 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest ${s.badge}`}>
                 {status}
               </span>
             </div>
-            <p className="text-[11px] font-medium text-slate-500 leading-tight truncate mt-1">{procedure}</p>
+            <p className="text-[10px] sm:text-[11px] font-medium text-slate-500 leading-tight truncate mt-1">{procedure}</p>
           </div>
           <div className="flex justify-between items-end gap-2">
-            <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 tabular-nums">
-              <Clock className="w-3 h-3" /> {timeStart} – {timeEnd}
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 flex items-center gap-1 tabular-nums">
+              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {timeStart} – {timeEnd}
             </span>
             {hasValue && (
-              <span className="text-[12px] font-black text-slate-900 truncate">{value}</span>
+              <span className="text-[11px] sm:text-[12px] font-black text-slate-900 truncate">{value}</span>
             )}
           </div>
         </div>
