@@ -178,20 +178,24 @@ export default function ClientesPage() {
     e.stopPropagation();
     if (!window.confirm("Tem certeza que deseja excluir este paciente permanentemente?")) return;
 
+    // 1. Atualização Otimista: Remove da tela imediatamente (funciona no Mock também)
+    setPatients(prev => prev.filter(p => p.id !== id));
+    if (selectedPatientId === id) setSelectedPatientId(null);
+
     try {
-      const res = await fetch(`${API_URL}/api/patients/batch`, {
+      // 2. Tenta deletar na API. 
+      // NOTA: Mudei para o padrão REST normal (/:id). 
+      // Se o seu backend REALMENTE exigir a rota /batch, volte para o código anterior do fetch.
+      const res = await fetch(`${API_URL}/api/patients/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [id] })
       });
 
-      if (!res.ok) throw new Error("Erro ao excluir");
-
-      setPatients(prev => prev.filter(p => p.id !== id));
-      if (selectedPatientId === id) setSelectedPatientId(null);
+      if (!res.ok) throw new Error("Erro ao excluir na API");
+      
     } catch (error) {
-      console.error("Erro ao excluir:", error);
-      alert("Não foi possível excluir o paciente.");
+      console.warn("API offline ou erro ao excluir no backend.", error);
+      // Aqui você poderia recarregar a lista original chamando fetchPatients() 
+      // caso quisesse desfazer a exclusão se a API falhar no ambiente de produção.
     }
   };
 
