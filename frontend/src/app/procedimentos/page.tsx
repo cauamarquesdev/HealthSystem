@@ -659,7 +659,7 @@ function ProcedureCard({ p, menuOpen, onMenu, onEdit, onDuplicate, onToggle, onD
         <div className="mt-4 sm:mt-5 flex items-end justify-between gap-2 sm:gap-3">
           <div>
             <span className={labelCls}>Preço</span>
-            <p className="text-[20px] sm:text-[26px] font-black text-slate-900 leading-none mt-1 tabular-nums truncate max-w-[120px] sm:max-w-[150px]">{formatBRL(p.price)}</p>
+            <p className="text-[20px] sm:text-[26px] font-black text-slate-900 leading-none mt-1 tabular-nums">{formatBRL(p.price)}</p>
           </div>
           <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-2.5 py-1 sm:py-1.5 whitespace-nowrap">
             <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> {formatDuration(p.duration)}
