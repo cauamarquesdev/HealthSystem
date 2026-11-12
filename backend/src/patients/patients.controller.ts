@@ -32,7 +32,7 @@ export class PatientsController {
   }
 
   // Rota: DELETE /patients/batch (Exclusão em lote)
-  @Delete('batch')
+  @Delete('batch-delete')
   deleteBatch(@Body('ids') ids: string[]) {
     return this.patientsService.deleteBatch(ids);
   }
