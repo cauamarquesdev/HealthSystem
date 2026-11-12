@@ -163,11 +163,28 @@ export class PatientsService {
     });
   }
 
+  // --- ALTERAÇÕES AQUI PARA RESOLVER A RESTRIÇÃO FOREIGN KEY ---
   async deleteBatch(ids: string[]) {
     if (!ids || ids.length === 0) {
       throw new NotFoundException('Nenhum ID fornecido para exclusão.');
     }
 
+    // 1. Apaga primeiro as vendas (Sale) vinculadas ao(s) paciente(s)
+    await this.prisma.sale.deleteMany({
+      where: {
+        patientId: { in: ids }
+      }
+    });
+
+    // 2. Apaga também os agendamentos (Appointment) se os tiveres definidos
+    // Se o teu schema não tiver o modelo appointment com a relação patientId, apaga estas linhas.
+    await this.prisma.appointment.deleteMany({
+      where: {
+        patientId: { in: ids }
+      }
+    });
+
+    // 3. Agora sim, apaga os pacientes em segurança
     const result = await this.prisma.patient.deleteMany({
       where: {
         id: { in: ids },
@@ -179,7 +196,7 @@ export class PatientsService {
     }
 
     return { 
-      message: 'Pacientes excluídos com sucesso do banco de dados.', 
+      message: 'Pacientes e as suas dependências foram excluídos com sucesso.', 
       count: result.count 
     };
   }
