@@ -25,7 +25,6 @@ export default function ClientesPage() {
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [checkedPatients, setCheckedPatients] = useState<string[]>([]);
 
-  // ESTADOS DO FORMULÁRIO (NOVO OU EDIÇÃO)
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "", cpf: "", birthDate: "", phone: "", email: "", hasWhatsapp: true,
@@ -33,7 +32,6 @@ export default function ClientesPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  // TAGS DISPONÍVEIS
   const AVAILABLE_TAGS = [
     "VIP PRIME", "LEAD QUENTE", "BOTOX PREVENTIVO", 
     "HARMONIZAÇÃO", "LASER / FOTONA", "MELASMA", "RETORNO"
@@ -45,7 +43,6 @@ export default function ClientesPage() {
     "Fitzpatrick V (Pele morena escura)", "Fitzpatrick VI (Pele negra)"
   ];
 
-  // FUNÇÃO PARA ALTERNAR TAGS
   const toggleTag = (tag: string) => {
     setFormData(prev => ({
       ...prev,
@@ -55,7 +52,6 @@ export default function ClientesPage() {
     }));
   };
 
-  // BUSCAR DADOS DO BANCO (GET)
   const fetchPatients = async () => {
     setIsLoading(true);
     try {
@@ -68,11 +64,8 @@ export default function ClientesPage() {
       }
     } catch (error) {
       console.warn("API offline, carregando dados de demonstração (Mock).", error);
-      // MOCK FALLBACK: Evita que a tela quebre se a API estiver desligada
       const mockData = [
-        { id: "1", pacId: "PAC-001", name: "Maria Carolina Silva", cpf: "111.222.333-44", phone: "(11) 99999-9999", tags: ["VIP PRIME", "BOTOX PREVENTIVO"], ltv: "12500.00", contracts: "3 contratos", lastVisit: "12/10/2026", lastProc: "Toxina Botulínica", fototipo: "Fitzpatrick II", skinTendency: "Oleosa", allergies: "Nenhuma", avatar: "https://i.pravatar.cc/150?img=1", hasWhatsapp: true, email: "maria@exemplo.com" },
-        { id: "2", pacId: "PAC-002", name: "Ana Beatriz Gomes", cpf: "222.333.444-55", phone: "(11) 98888-8888", tags: ["MELASMA"], ltv: "3200.00", contracts: "1 contrato", lastVisit: "05/11/2026", lastProc: "Peeling Químico", fototipo: "Fitzpatrick III", skinTendency: "Seca", allergies: "Ácido Glicólico", avatar: "https://i.pravatar.cc/150?img=2", hasWhatsapp: true, email: "ana@exemplo.com" },
-        { id: "3", pacId: "PAC-003", name: "Juliana Martins", cpf: "333.444.555-66", phone: "(11) 97777-7777", tags: ["HARMONIZAÇÃO", "RETORNO"], ltv: "8900.00", contracts: "2 contratos", lastVisit: "20/10/2026", lastProc: "Preenchimento Labial", fototipo: "Fitzpatrick IV", skinTendency: "Mista", allergies: "Nenhuma", avatar: "https://i.pravatar.cc/150?img=3", hasWhatsapp: true, email: "juliana@exemplo.com" }
+        { id: "1", pacId: "PAC-001", name: "Maria Carolina Silva", cpf: "111.222.333-44", phone: "(11) 99999-9999", tags: ["VIP PRIME", "BOTOX PREVENTIVO"], ltv: "12500.00", contracts: "3 contratos", lastVisit: "12/10/2026", lastProc: "Toxina Botulínica", fototipo: "Fitzpatrick II", skinTendency: "Oleosa", allergies: "Nenhuma", avatar: "https://i.pravatar.cc/150?img=1", hasWhatsapp: true, email: "maria@exemplo.com" }
       ];
       setPatients(mockData);
       if (!selectedPatientId) setSelectedPatientId(mockData[0].id);
@@ -85,14 +78,12 @@ export default function ClientesPage() {
     fetchPatients();
   }, []);
 
-  // ABRIR MODAL PARA NOVO PACIENTE (Limpa os campos)
   const handleOpenNewPatient = () => {
     setEditingPatientId(null);
     setFormData({ name: "", cpf: "", birthDate: "", phone: "", email: "", hasWhatsapp: true, tags: [], fototipo: "", skinTendency: "", allergies: "" });
     setIsNewPatientModalOpen(true);
   };
 
-  // ABRIR MODAL PARA EDIÇÃO (Preenche os campos)
   const handleEditPatient = (e: React.MouseEvent, patient: any) => {
     e.stopPropagation();
     setEditingPatientId(patient.id || patient._id);
@@ -120,7 +111,6 @@ export default function ClientesPage() {
     setIsNewPatientModalOpen(true);
   };
 
-  // SALVAR PACIENTE (POST OU PATCH)
   const handleSavePatient = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
@@ -167,13 +157,13 @@ export default function ClientesPage() {
       setIsNewPatientModalOpen(false);
     } catch (error) {
       console.error("Erro ao salvar paciente:", error);
-      alert("Não foi possível salvar o paciente. Verifique os dados e a conexão com a API.");
+      alert("Não foi possível salvar o paciente.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // DELETAR PACIENTE (APENAS LÓGICA DE FRONT-END USANDO FETCH)
+  // EXCLUSÃO CORRIGIDA USANDO POST PARA EVITAR BLOQUEIOS DE BODY NO RENDER
   const handleDeletePatient = async (e: React.MouseEvent, idParaDeletar: string) => {
     e.stopPropagation();
     
@@ -186,13 +176,13 @@ export default function ClientesPage() {
 
     const pacientesAnteriores = [...patients];
 
-    // 1. Atualização Otimista
     setPatients(prev => prev.filter(p => p.id !== idParaDeletar && p._id !== idParaDeletar));
     if (selectedPatientId === idParaDeletar) setSelectedPatientId(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/patients/batch`, {
-        method: "DELETE",
+      // Usando POST na rota batch-delete para garantir que o array de IDs chegue ao servidor
+      const res = await fetch(`${API_URL}/api/patients/batch-delete`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: [idParaDeletar] })
       });
@@ -203,11 +193,10 @@ export default function ClientesPage() {
     } catch (error) {
       console.error("Falha ao excluir no banco de dados:", error);
       alert("O backend falhou ao excluir. O paciente voltará para a tela.");
-      setPatients(pacientesAnteriores); // Reverte a tela
+      setPatients(pacientesAnteriores);
     }
   };
   
-  // FILTRAGEM DINÂMICA
   const filteredPatients = patients.filter(p => {
     const textMatch = p.name?.toLowerCase().includes(busca.toLowerCase()) || 
                       (p.cpf && p.cpf.includes(busca)) || 
@@ -221,7 +210,6 @@ export default function ClientesPage() {
     return true; 
   });
 
-  // SELEÇÃO MÚLTIPLA
   const handleToggleCheck = (e: React.MouseEvent, id: string) => {
     e.stopPropagation(); 
     setCheckedPatients(prev => 
@@ -229,7 +217,6 @@ export default function ClientesPage() {
     );
   };
 
-  // EXPORTAR EXCEL
   const handleExportExcel = () => {
     const csvRows = [
       ["ID", "Nome", "CPF", "Telefone", "E-mail", "LTV Total", "Ultima Visita"],
@@ -272,11 +259,9 @@ export default function ClientesPage() {
       busca={{ valor: busca, onChange: setBusca, placeholder: "Pesquisar por nome ou CPF..." }}
       acoes={acoesTopo}
     >
-      {/* Wrapper principal */}
       <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
         <div className="flex-1 flex flex-col w-full max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8 gap-5 sm:gap-6 min-h-0">
           
-          {/* HEADER DA PÁGINA */}
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 shrink-0">
             <div>
               <h1 className="text-xl sm:text-[26px] font-black text-slate-900 tracking-tight leading-none mb-1.5 sm:mb-2">
@@ -296,7 +281,6 @@ export default function ClientesPage() {
             </div>
           </div>
 
-          {/* METRICS GRID */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 shrink-0">
             <MetricCard title="TOTAL DE PACIENTES" value={patients.length.toString()} icon={<Users className="w-4 h-4"/>} isPositive />
             <MetricCard title="BASE ATIVA (180D)" value={patients.filter(p => p.active !== false).length} icon={<Activity className="w-4 h-4"/>} />
@@ -305,7 +289,6 @@ export default function ClientesPage() {
             <div className="col-span-2 lg:col-span-1"><MetricCard title="CICLO DE RETOQUE" value="67" icon={<Clock className="w-4 h-4"/>} /></div>
           </div>
 
-          {/* FILTERS */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide items-center w-full pb-1 shrink-0">
             <FilterPill label={`Todos (${patients.length})`} active={activeFilter === "Todos"} onClick={() => setActiveFilter("Todos")} />
             <FilterPill label={`VIP Prime (${patients.filter(p => (p.tags||[]).includes("VIP PRIME")).length})`} active={activeFilter === "VIP Prime"} onClick={() => setActiveFilter("VIP Prime")} />
@@ -313,10 +296,8 @@ export default function ClientesPage() {
             <FilterPill label="Inativos" active={activeFilter === "Inativos"} onClick={() => setActiveFilter("Inativos")} />
           </div>
 
-          {/* SPLIT WORKSPACE: LIST + DETAILS */}
           <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-6 min-h-[400px]">
             
-            {/* LEFT PANE: LISTAGEM */}
             <div className={`flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex-col min-w-0 overflow-hidden ${selectedPatientId ? "hidden lg:flex" : "flex"}`}>
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -391,7 +372,6 @@ export default function ClientesPage() {
                             <span className="text-[11px] font-bold text-slate-700 block">{p.lastVisit || "-"}</span>
                             <span className="text-[10px] font-medium text-slate-500 truncate block w-32 mt-0.5">{p.lastProc || "-"}</span>
                           </div>
-                          {/* Ações de Hover */}
                           <div className="w-16 flex items-center justify-end gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                             <button onClick={(e) => handleEditPatient(e, p)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"><Edit3 className="w-4 h-4"/></button>
                             <button onClick={(e) => handleDeletePatient(e, p.id || p._id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"><Trash2 className="w-4 h-4"/></button>
@@ -403,7 +383,6 @@ export default function ClientesPage() {
                 </div>
               </div>
 
-              {/* Pagination */}
               <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                 <span className="text-[11px] sm:text-[12px] font-medium text-slate-500 text-center sm:text-left">Mostrando <span className="font-bold text-slate-700">1 a {filteredPatients.length}</span> de {filteredPatients.length} pacientes</span>
                 <div className="flex items-center justify-center sm:justify-end gap-5 w-full sm:w-auto">
@@ -417,7 +396,7 @@ export default function ClientesPage() {
               </div>
             </div>
 
-            {/* RIGHT PANE: DETALHES DINÂMICOS (Visão 360) */}
+            {/* RIGHT PANE */}
             <div className={`w-full lg:w-[380px] xl:w-[420px] shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm flex-col overflow-hidden ${selectedPatientId ? "flex" : "hidden lg:flex"}`}>
               {activePatient ? (
                 <>
@@ -426,7 +405,6 @@ export default function ClientesPage() {
                       <ChevronLeft className="w-4 h-4"/> Voltar para lista
                     </button>
                     
-                    {/* Header Profiler */}
                     <div className="flex items-start justify-between mb-8">
                       <div className="flex gap-4">
                         <div className="relative shrink-0">
@@ -482,10 +460,8 @@ export default function ClientesPage() {
                         <span className="text-[22px] font-black text-slate-900 truncate">R$ {activePatient.ltv || activePatient.ltvTotal || "0,00"}</span>
                       </div>
                     </div>
-
                   </div>
 
-                  {/* Detail Footer Actions */}
                   <div className="p-4 sm:p-5 border-t border-slate-100 bg-white shrink-0 space-y-4">
                     <button 
                       onClick={() => setIsProntuarioOpen(true)}
@@ -507,7 +483,6 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      {/* ==================== MODAL DE NOVA VENDA ==================== */}
       <AnimatePresence>
         {isNewSaleOpen && (
           <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6">
@@ -556,7 +531,6 @@ export default function ClientesPage() {
         )}
       </AnimatePresence>
 
-      {/* ==================== MODAL NOVO PACIENTE 360º ==================== */}
       <AnimatePresence>
         {isNewPatientModalOpen && (
           <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-6">
@@ -600,7 +574,6 @@ export default function ClientesPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col md:flex-row bg-[#f8fafc]">
-                
                 <div className="w-full md:w-[320px] bg-white border-b md:border-b-0 md:border-r border-slate-100 p-6 sm:p-8 shrink-0 flex flex-col items-center">
                   <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center group cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all relative overflow-hidden mb-6 shadow-sm">
                     <Camera className="w-6 h-6 sm:w-8 sm:h-8 text-slate-400 group-hover:text-blue-600 transition-colors z-10 mb-1" />
@@ -638,7 +611,6 @@ export default function ClientesPage() {
 
                 <div className="flex-1 p-6 sm:p-8">
                   <form id="newPatientForm" onSubmit={handleSavePatient} className="space-y-8 max-w-2xl mx-auto md:mx-0">
-                    
                     <div>
                       <h3 className="text-[11px] sm:text-[12px] font-black text-slate-900 uppercase tracking-widest mb-4 sm:mb-5 flex items-center gap-2 border-b border-slate-200 pb-2">
                         <UserCircle className="w-4 h-4 text-blue-600 shrink-0" /> Dados Pessoais
@@ -756,13 +728,11 @@ export default function ClientesPage() {
                   {isSaving ? "Salvando..." : editingPatientId ? "Salvar Alterações" : "Criar Prontuário"}
                 </button>
               </div>
-
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* ==================== DRAWER: PRONTUÁRIO COMPLETO 360º ==================== */}
       <AnimatePresence>
         {isProntuarioOpen && activePatient && (
           <div className="fixed inset-0 z-[1000] flex justify-end">
@@ -797,7 +767,6 @@ export default function ClientesPage() {
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
-
               <div className="flex-1 p-6 sm:p-8 text-center text-slate-400 overflow-y-auto">
                 Conteúdo do Prontuário aqui...
               </div>
