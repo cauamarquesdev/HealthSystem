@@ -9,30 +9,27 @@ import {
 } from '@nestjs/common';
 import { PatientsService } from './patients.service';
 
-@Controller('patients') // <-- Isso define que a rota base é /patients
+@Controller('patients') // Com o main.ts, isto vira /api/patients
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
-  // Rota: POST /patients (Criar paciente)
   @Post()
   create(@Body() data: any) {
     return this.patientsService.create(data);
   }
 
-  // Rota: GET /patients (Listar todos)
   @Get()
   findAll() {
     return this.patientsService.findAll();
   }
 
-  // Rota: PATCH /patients/:id/status (Ativar/Inativar)
   @Patch(':id/status')
   toggleStatus(@Param('id') id: string, @Body('active') active: boolean) {
     return this.patientsService.toggleStatus(id, active);
   }
 
-  // Rota: DELETE /patients/batch (Exclusão em lote)
-  @Delete('batch-delete')
+  // ROTA CORRIGIDA: Agora é @Post para bater certo com o Front-end
+  @Post('batch-delete')
   deleteBatch(@Body('ids') ids: string[]) {
     return this.patientsService.deleteBatch(ids);
   }
